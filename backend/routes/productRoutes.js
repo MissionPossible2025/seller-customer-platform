@@ -41,7 +41,7 @@ router.post('/', upload.single('photo'), createProduct);                    // C
 router.get('/', getAllProducts);                    // Get all products with filters
 router.get('/seller/:sellerId', getProductsBySeller); // Get products by specific seller
 router.get('/:id', getProductById);                 // Get single product by ID
-router.put('/:id', updateProduct);                  // Update product
+router.put('/:id', upload.single('photo'), updateProduct);                  // Update product
 router.delete('/:id', deleteProduct);               // Delete product (soft delete)
 
 export default router;

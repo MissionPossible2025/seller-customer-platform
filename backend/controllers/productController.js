@@ -149,7 +149,13 @@ export const updateProduct = async (req, res) => {
     if (price !== undefined) updateData.price = price;
     if (discountedPrice !== undefined) updateData.discountedPrice = discountedPrice;
     if (stock !== undefined) updateData.stock = stock;
-    if (photo !== undefined) updateData.photo = photo;
+    // If a new file is uploaded, override photo with the new public URL
+    if (req.file) {
+      const filename = req.file.filename;
+      updateData.photo = `${req.protocol}://${req.get('host')}/uploads/${filename}`;
+    } else if (photo !== undefined) {
+      updateData.photo = photo;
+    }
     if (isActive !== undefined) updateData.isActive = isActive;
 
     const product = await Product.findByIdAndUpdate(

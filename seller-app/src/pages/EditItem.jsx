@@ -1,12 +1,11 @@
 // src/pages/EditItem.jsx
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { getProductById, updateProduct } from "../services/productService";
 
 export default function EditItem() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const [item, setItem] = useState({
     name: "",
     description: "",
@@ -39,7 +38,11 @@ export default function EditItem() {
   }, [id]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, files } = e.target;
+    if (name === 'photoFile') {
+      setItem(prev => ({ ...prev, photoFile: files && files[0] ? files[0] : null }));
+      return;
+    }
     setItem(prev => ({ ...prev, [name]: value }));
   };
 
@@ -57,8 +60,7 @@ export default function EditItem() {
       
       if (response.message) {
         alert("Product updated successfully!");
-        // Navigate back to dashboard with modal state
-        navigate("/", { state: { returnToModal: true } });
+        navigate("/");
       }
     } catch (err) {
       console.error("Error updating product:", err);
@@ -69,8 +71,7 @@ export default function EditItem() {
   };
 
   const handleCancel = () => {
-    // Navigate back to dashboard with modal state
-    navigate("/", { state: { returnToModal: true } });
+    navigate("/");
   };
 
   if (loading) {
@@ -204,20 +205,31 @@ export default function EditItem() {
             />
           </div>
           <div>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>Photo URL:</label>
+            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>Product Photo:</label>
             <input 
-              type="text" 
-              name="photo" 
-              value={item.photo} 
+              type="file" 
+              name="photoFile" 
+              accept="image/*"
               onChange={handleChange}
               style={{
                 width: "100%",
-                padding: "0.75rem",
+                padding: "0.5rem",
                 borderRadius: "6px",
                 border: "1px solid #ccc",
-                fontSize: "1rem"
+                fontSize: "1rem",
+                background: "white"
               }}
             />
+            {item.photoFile && (
+              <div style={{ marginTop: "0.5rem", color: "#555", fontSize: "0.9rem" }}>
+                Selected: <span style={{ fontWeight: 600 }}>{item.photoFile.name}</span>
+              </div>
+            )}
+            {!item.photoFile && item.photo && (
+              <div style={{ marginTop: "0.5rem", color: "#555", fontSize: "0.9rem" }}>
+                Current photo will remain unchanged unless a new file is selected.
+              </div>
+            )}
           </div>
         </div>
         

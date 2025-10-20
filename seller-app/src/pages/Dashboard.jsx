@@ -1,17 +1,16 @@
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axios from "axios";
 
 export default function Dashboard({ user }) {
   const navigate = useNavigate();
-  const location = useLocation();
+  
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' or 'products'
   const [zoomImageUrl, setZoomImageUrl] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editModalSearchTerm, setEditModalSearchTerm] = useState("");
+  
 
   // Fetch products when component mounts
   useEffect(() => {
@@ -31,14 +30,7 @@ export default function Dashboard({ user }) {
     }
   }, [user?._id]);
 
-  // Check if returning from EditItem and reopen modal
-  useEffect(() => {
-    if (location.state?.returnToModal) {
-      setShowEditModal(true);
-      // Clear the state to prevent reopening on refresh
-      navigate(location.pathname, { replace: true, state: {} });
-    }
-  }, [location.state, navigate, location.pathname]);
+  
 
   // Group products by category
   const groupedProducts = products.reduce((groups, product) => {
@@ -50,27 +42,7 @@ export default function Dashboard({ user }) {
     return groups;
   }, {});
 
-  // Filter products for edit modal
-  const filteredProductsForEdit = products.filter(product => {
-    const searchQuery = editModalSearchTerm.trim().toLowerCase();
-    if (!searchQuery) return true;
-    
-    return (
-      (product.name || '').toLowerCase().includes(searchQuery) ||
-      (product.description || '').toLowerCase().includes(searchQuery) ||
-      (product.category || '').toLowerCase().includes(searchQuery)
-    );
-  });
-
-  // Group filtered products by category for edit modal
-  const groupedProductsForEdit = filteredProductsForEdit.reduce((groups, product) => {
-    const category = product.category;
-    if (!groups[category]) {
-      groups[category] = [];
-    }
-    groups[category].push(product);
-    return groups;
-  }, {});
+  // (Removed modal filtering and grouping)
 
   return (
     <div style={{ 
@@ -163,29 +135,7 @@ export default function Dashboard({ user }) {
             >
               Add New Product
             </button>
-            <button 
-              onClick={() => {
-                setShowEditModal(true);
-                setEditModalSearchTerm(""); // Clear search when opening modal
-              }}
-              disabled={products.length === 0}
-              style={{
-                padding: "1rem 2rem",
-                borderRadius: "8px",
-                fontSize: "1.1rem",
-                fontWeight: "600",
-                cursor: products.length === 0 ? "not-allowed" : "pointer",
-                transition: "all 0.3s ease",
-                backgroundColor: products.length === 0 ? "#999" : "#28a745",
-                color: "white",
-                border: "none",
-                opacity: products.length === 0 ? 0.6 : 1
-              }}
-              onMouseOver={(e) => products.length > 0 && (e.target.style.backgroundColor = "#218838")}
-              onMouseOut={(e) => products.length > 0 && (e.target.style.backgroundColor = "#28a745")}
-            >
-              Edit Item
-            </button>
+            {/* Edit Item button removed to keep single edit entry point */}
             <button 
               onClick={() => navigate("/update-delivery")}
               style={{
@@ -346,214 +296,7 @@ export default function Dashboard({ user }) {
             )}
           </div>
         )}
-        {/* Product Selection Modal for Editing */}
-        {showEditModal && (
-          <div 
-            onClick={() => {
-              setShowEditModal(false);
-              setEditModalSearchTerm(""); // Clear search when closing modal
-            }}
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: "rgba(0,0,0,0.8)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 1000,
-              padding: "1rem"
-            }}
-          >
-            <div 
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                backgroundColor: "#1a1a1a",
-                borderRadius: "12px",
-                padding: "2rem",
-                maxWidth: "600px",
-                width: "100%",
-                maxHeight: "80vh",
-                overflowY: "auto",
-                border: "1px solid #333"
-              }}
-            >
-              <h2 style={{ 
-                marginBottom: "1.5rem", 
-                fontSize: "1.5rem", 
-                textAlign: "center",
-                color: "#ffffff"
-              }}>
-                Select Product to Edit
-              </h2>
-              
-              {/* Search Bar */}
-              <div style={{ marginBottom: "1.5rem" }}>
-                <input
-                  type="text"
-                  placeholder="Search products by name, description, or category..."
-                  value={editModalSearchTerm}
-                  onChange={(e) => setEditModalSearchTerm(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "0.75rem 1rem",
-                    borderRadius: "6px",
-                    border: "2px solid #444",
-                    backgroundColor: "#2a2a2a",
-                    color: "#ffffff",
-                    fontSize: "1rem",
-                    outline: "none",
-                    transition: "border-color 0.3s ease"
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = "#646cff"}
-                  onBlur={(e) => e.target.style.borderColor = "#444"}
-                />
-              </div>
-              
-              {products.length === 0 ? (
-                <div style={{ textAlign: "center", color: "#aaa" }}>
-                  <p>No products available to edit.</p>
-                  <p>Add a product first to edit it.</p>
-                </div>
-              ) : Object.keys(groupedProductsForEdit).length === 0 ? (
-                <div style={{ textAlign: "center", color: "#aaa", padding: "2rem" }}>
-                  <p style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>No products found</p>
-                  <p>Try adjusting your search terms</p>
-                </div>
-              ) : (
-                <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
-                  {Object.entries(groupedProductsForEdit).map(([category, categoryProducts]) => (
-                    <div key={category} style={{ marginBottom: "2rem" }}>
-                      <h3 style={{ 
-                        color: "#646cff", 
-                        fontSize: "1.3rem", 
-                        marginBottom: "1rem",
-                        borderBottom: "2px solid #646cff",
-                        paddingBottom: "0.5rem",
-                        textAlign: "center"
-                      }}>
-                        {category} ({categoryProducts.length} items)
-                      </h3>
-                      <div style={{ 
-                        display: "grid", 
-                        gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", 
-                        gap: "1rem",
-                        marginBottom: "1.5rem"
-                      }}>
-                        {categoryProducts.map((product) => (
-                          <div 
-                            key={product._id}
-                            onClick={() => {
-                              navigate(`/edit-item/${product._id}`, { 
-                                state: { returnToModal: true } 
-                              });
-                              setShowEditModal(false);
-                            }}
-                            style={{
-                              padding: "1rem",
-                              border: "2px solid #444",
-                              borderRadius: "8px",
-                              cursor: "pointer",
-                              transition: "all 0.3s ease",
-                              backgroundColor: "#2a2a2a"
-                            }}
-                            onMouseOver={(e) => {
-                              e.target.style.borderColor = "#646cff";
-                              e.target.style.backgroundColor = "#333";
-                            }}
-                            onMouseOut={(e) => {
-                              e.target.style.borderColor = "#444";
-                              e.target.style.backgroundColor = "#2a2a2a";
-                            }}
-                          >
-                            {product.photo && (
-                              <img 
-                                src={product.photo}
-                                alt={product.name}
-                                style={{ 
-                                  width: "100%",
-                                  height: "120px",
-                                  objectFit: "cover",
-                                  borderRadius: "6px",
-                                  marginBottom: "0.75rem"
-                                }}
-                                onError={(e) => e.target.style.display = 'none'}
-                              />
-                            )}
-                            <h4 style={{ 
-                              marginBottom: "0.5rem", 
-                              fontSize: "1.1rem",
-                              color: "#ffffff"
-                            }}>
-                              {product.name}
-                            </h4>
-                            <p style={{ 
-                              color: "#ccc", 
-                              fontSize: "0.9rem",
-                              marginBottom: "0.5rem",
-                              display: "-webkit-box",
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: "vertical",
-                              overflow: "hidden"
-                            }}>
-                              {product.description}
-                            </p>
-                            <div style={{ 
-                              display: "flex", 
-                              justifyContent: "space-between",
-                              alignItems: "center"
-                            }}>
-                              <span style={{ 
-                                color: "#646cff", 
-                                fontWeight: "600",
-                                fontSize: "0.9rem"
-                              }}>
-                                ${product.discountedPrice || product.price}
-                              </span>
-                              <span style={{ 
-                                color: "#aaa", 
-                                fontSize: "0.8rem"
-                              }}>
-                                Stock: {product.stock}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              <div style={{ 
-                display: "flex", 
-                justifyContent: "center",
-                marginTop: "1.5rem"
-              }}>
-                <button 
-                  onClick={() => {
-                    setShowEditModal(false);
-                    setEditModalSearchTerm(""); // Clear search when closing modal
-                  }}
-                  style={{
-                    padding: "0.75rem 1.5rem",
-                    borderRadius: "6px",
-                    fontSize: "1rem",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    backgroundColor: "#444",
-                    color: "#ffffff",
-                    border: "none"
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* (Edit product selection modal removed) */}
         
         {/* Zoom Modal */}
         {zoomImageUrl && (

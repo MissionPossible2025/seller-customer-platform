@@ -43,7 +43,20 @@ export const getProductById = async (productId) => {
 // Update a product
 export const updateProduct = async (productId, productData) => {
   try {
-    const response = await axios.put(`${API_BASE_URL}/${productId}`, productData);
+    const formData = new FormData();
+    Object.entries(productData).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        if (key === 'photoFile') {
+          if (value) formData.append('photo', value);
+        } else {
+          formData.append(key, value);
+        }
+      }
+    });
+
+    const response = await axios.put(`${API_BASE_URL}/${productId}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.error || 'Failed to update product');
