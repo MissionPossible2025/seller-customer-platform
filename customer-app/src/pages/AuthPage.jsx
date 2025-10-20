@@ -2,6 +2,8 @@ import { useState } from 'react'
 
 export default function AuthPage() {
   const [mode, setMode] = useState('signin') // 'signin' | 'signup'
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   return (
     <div style={{
@@ -30,25 +32,68 @@ export default function AuthPage() {
         </p>
 
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault()
-            const form = new FormData(e.currentTarget)
-            const email = form.get('email')
-            const password = form.get('password')
-            const name = form.get('name')
-            console.log(`${mode} with`, { email, password, name })
-            // TODO: hook to backend user routes
+            setError('')
+            setLoading(true)
+            try {
+              const form = new FormData(e.currentTarget)
+              const email = form.get('email')
+              const password = form.get('password')
+              const name = form.get('name')
+              const uniqueCode = form.get('uniqueCode')
+
+              if (mode === 'signup') {
+                const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ name, email, password, uniqueCode })
+                })
+                const data = await res.json()
+                if (!res.ok) throw new Error(data.error || 'Signup failed')
+                // After successful signup, allow entry
+                localStorage.setItem('user', JSON.stringify(data))
+                window.location.href = '/dashboard'
+              } else {
+                // Sign in: allow email-only for customers if no password provided, include name
+                const body = password ? { email, password, name } : { email, name }
+                const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/login`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(body)
+                })
+                const data = await res.json()
+                if (!res.ok) throw new Error(data.error || 'Sign in failed')
+                localStorage.setItem('user', JSON.stringify(data))
+                window.location.href = '/dashboard'
+              }
+            } catch (err) {
+              setError(err.message)
+            } finally {
+              setLoading(false)
+            }
           }}
           style={{ display: 'grid', gap: '0.85rem' }}
         >
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.4rem', color: '#cbd5e1' }}>Name</label>
+            <input
+              name="name"
+              type="text"
+              required
+              placeholder="Jane Doe"
+              style={inputStyle}
+            />
+          </div>
+
           {mode === 'signup' && (
             <div>
-              <label style={{ display: 'block', marginBottom: '0.4rem', color: '#cbd5e1' }}>Name</label>
+              <label style={{ display: 'block', marginBottom: '0.4rem', color: '#cbd5e1' }}>Unique Code</label>
               <input
-                name="name"
+                name="uniqueCode"
                 type="text"
                 required
-                placeholder="Jane Doe"
+                placeholder="Enter unique code"
                 style={inputStyle}
               />
             </div>
@@ -70,14 +115,18 @@ export default function AuthPage() {
             <input
               name="password"
               type="password"
-              required
+              required={mode === 'signup'}
               placeholder={mode === 'signin' ? 'Your password' : 'Create a strong password'}
               style={inputStyle}
             />
           </div>
 
+          {error && (
+            <div style={{ color: '#fca5a5', fontSize: '0.95rem' }}>{error}</div>
+          )}
+
           <button type="submit" style={primaryButtonStyle}>
-            {mode === 'signin' ? 'Sign In' : 'Create Account'}
+            {loading ? (mode === 'signin' ? 'Signing in...' : 'Creating...') : (mode === 'signin' ? 'Sign In' : 'Create Account')}
           </button>
         </form>
 
