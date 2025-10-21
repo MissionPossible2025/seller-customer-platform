@@ -1,15 +1,57 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import ProfileModal from '../components/ProfileModal'
 
 export default function CartPage() {
+  const navigate = useNavigate()
   const [cart, setCart] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [showProfileModal, setShowProfileModal] = useState(false)
+  const [user, setUser] = useState(null)
 
   // Get current user from localStorage
   const getCurrentUser = () => {
     const userData = localStorage.getItem('user')
     return userData ? JSON.parse(userData) : null
+  }
+
+  // Check if profile is complete
+  const isProfileComplete = (userData) => {
+    if (!userData) return false
+    const actualUser = userData.user || userData
+    return actualUser.name && actualUser.phone && 
+      actualUser.address?.street && actualUser.address?.city && 
+      actualUser.address?.state && actualUser.address?.pincode
+  }
+
+  // Handle checkout process
+  const handleCheckout = () => {
+    const userData = getCurrentUser()
+    
+    if (!isProfileComplete(userData)) {
+      setShowProfileModal(true)
+      setMessage('⚠️ Please complete your profile to proceed with checkout')
+      setTimeout(() => setMessage(''), 5000)
+      return
+    }
+
+    // Proceed with checkout - navigate to order summary
+    const actualUser = userData.user || userData
+    const checkoutData = {
+      user: {
+        name: actualUser.name,
+        email: actualUser.email,
+        phone: actualUser.phone,
+        address: actualUser.address
+      },
+      cart: cart,
+      totalAmount: cart?.totalAmount || 0
+    }
+
+    // Navigate to order summary page
+    navigate('/order-summary', { state: { orderData: checkoutData } })
   }
 
   // Fetch cart data
@@ -49,6 +91,8 @@ export default function CartPage() {
 
   useEffect(() => {
     fetchCart()
+    const userData = getCurrentUser()
+    setUser(userData)
   }, [])
 
   // Update item quantity
@@ -177,21 +221,37 @@ export default function CartPage() {
 
   const cartItems = cart?.items || []
   const totalAmount = cart?.totalAmount || 0
+  const profileComplete = isProfileComplete(user)
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '1.5rem' }}>
         <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ marginTop: 0, marginBottom: '1rem', color: '#0f172a' }}>Shopping Cart</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+            <button
+              onClick={() => navigate(-1)}
+              style={{
+                padding: '0.5rem 0.75rem',
+                borderRadius: '8px',
+                border: '1px solid #d1d5db',
+                background: 'white',
+                color: '#374151',
+                cursor: 'pointer'
+              }}
+            >
+              ← Back
+            </button>
+            <h1 style={{ marginTop: 0, marginBottom: 0, color: '#0f172a' }}>Shopping Cart</h1>
+          </div>
           
           {message && (
             <div style={{
               padding: '1rem',
               borderRadius: '8px',
               marginBottom: '1rem',
-              background: message.includes('✅') ? '#f0fdf4' : message.includes('❌') ? '#fef2f2' : '#fefce8',
-              border: message.includes('✅') ? '1px solid #bbf7d0' : message.includes('❌') ? '1px solid #fecaca' : '1px solid #fde68a',
-              color: message.includes('✅') ? '#166534' : message.includes('❌') ? '#dc2626' : '#d97706',
+              background: message.includes('✅') ? '#f0fdf4' : message.includes('❌') ? '#fef2f2' : message.includes('⚠️') ? '#fefce8' : '#fefce8',
+              border: message.includes('✅') ? '1px solid #bbf7d0' : message.includes('❌') ? '1px solid #fecaca' : message.includes('⚠️') ? '1px solid #fde68a' : '1px solid #fde68a',
+              color: message.includes('✅') ? '#166534' : message.includes('❌') ? '#dc2626' : message.includes('⚠️') ? '#d97706' : '#d97706',
               fontSize: '1rem',
               fontWeight: '500',
               textAlign: 'center'
@@ -395,6 +455,42 @@ export default function CartPage() {
               }}>
                 <h3 style={{ margin: '0 0 1rem 0', color: '#0f172a' }}>Order Summary</h3>
                 
+                {/* Profile Status */}
+                <div style={{
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  marginBottom: '1rem',
+                  background: profileComplete ? '#f0fdf4' : '#fefce8',
+                  border: profileComplete ? '1px solid #bbf7d0' : '1px solid #fde68a'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    color: profileComplete ? '#166534' : '#d97706'
+                  }}>
+                    <div style={{
+                      width: '16px',
+                      height: '16px',
+                      borderRadius: '50%',
+                      background: profileComplete ? '#10b981' : '#f59e0b',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '10px'
+                    }}>
+                      {profileComplete ? '✓' : '!'}
+                    </div>
+                    {profileComplete 
+                      ? 'Profile complete - Ready for checkout' 
+                      : 'Complete profile for checkout'
+                    }
+                  </div>
+                </div>
+                
                 <div style={{ marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                     <span>Items ({cartItems.length})</span>
@@ -421,16 +517,16 @@ export default function CartPage() {
                     padding: '1rem',
                     borderRadius: '8px',
                     border: 'none',
-                    background: '#059669',
+                    background: profileComplete ? '#059669' : '#6b7280',
                     color: 'white',
                     fontSize: '1.1rem',
                     fontWeight: '600',
-                    cursor: 'pointer',
+                    cursor: profileComplete ? 'pointer' : 'not-allowed',
                     marginBottom: '1rem'
                   }}
-                  onClick={() => alert('Checkout functionality will be implemented soon!')}
+                  onClick={handleCheckout}
                 >
-                  Proceed to Checkout
+                  {profileComplete ? 'Proceed to Checkout' : 'Complete Profile First'}
                 </button>
 
                 <button 
@@ -454,6 +550,12 @@ export default function CartPage() {
           </div>
         )}
       </div>
+
+      {/* Profile Modal */}
+      <ProfileModal 
+        isOpen={showProfileModal} 
+        onClose={() => setShowProfileModal(false)} 
+      />
     </div>
   )
 }

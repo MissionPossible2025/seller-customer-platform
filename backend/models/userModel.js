@@ -19,6 +19,36 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['seller', 'customer'],
     default: 'customer'
+  },
+  phone: {
+    type: String,
+    default: ''
+  },
+  address: {
+    street: {
+      type: String,
+      default: ''
+    },
+    city: {
+      type: String,
+      default: ''
+    },
+    state: {
+      type: String,
+      default: ''
+    },
+    pincode: {
+      type: String,
+      default: ''
+    },
+    country: {
+      type: String,
+      default: 'India'
+    }
+  },
+  profileComplete: {
+    type: Boolean,
+    default: false
   }
 }, { timestamps: true });
 

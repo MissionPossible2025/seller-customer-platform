@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import SearchBar from '../components/SearchBar'
+import UserProfileIcon from '../components/UserProfileIcon'
+import ProfileModal from '../components/ProfileModal'
 
 export default function Dashboard() {
   const userPayload = (() => {
@@ -12,12 +14,31 @@ export default function Dashboard() {
 
   const name = userPayload?.user?.name || 'Customer'
   const [searchTerm, setSearchTerm] = useState('')
+  const [showProfileModal, setShowProfileModal] = useState(false)
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: '1.5rem' }}>
-        <h1 style={{ marginTop: 0, marginBottom: '0.75rem', color: '#0f172a' }}>Hello, {name}</h1>
+      {/* Header with Profile Icon */}
+      <div style={{
+        background: 'white',
+        borderBottom: '1px solid #e5e7eb',
+        padding: '1rem 0'
+      }}>
+        <div style={{ maxWidth: 960, margin: '0 auto', padding: '0 1.5rem' }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <h1 style={{ margin: 0, color: '#0f172a', fontSize: '1.5rem', fontWeight: '600' }}>
+              Hello, {name}
+            </h1>
+            <UserProfileIcon onProfileClick={() => setShowProfileModal(true)} />
+          </div>
+        </div>
+      </div>
 
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: '1.5rem' }}>
         <div style={{ marginBottom: '1rem' }}>
           <SearchBar 
             value={searchTerm}
@@ -42,6 +63,12 @@ export default function Dashboard() {
           <button style={cardButtonStyle}>View Orders</button>
         </div>
       </div>
+
+      {/* Profile Modal */}
+      <ProfileModal 
+        isOpen={showProfileModal} 
+        onClose={() => setShowProfileModal(false)} 
+      />
     </div>
   )
 }

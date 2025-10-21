@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import SearchBar from '../components/SearchBar'
 
 export default function ProductsPage() {
+  const navigate = useNavigate()
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -110,16 +112,8 @@ export default function ProductsPage() {
         return
       }
 
-      // First add to cart
-      await handleAddToCart(product)
-      
-      // Then redirect to checkout (you can implement checkout page later)
-      setCartMessage('🛍️ Redirecting to checkout...')
-      setTimeout(() => {
-        setCartMessage('')
-        // For now, just show a message. You can implement checkout page later
-        alert('Checkout functionality will be implemented soon!')
-      }, 1500)
+      // Navigate to Buy Now page with product data
+      navigate('/buy-now', { state: { product } })
     } catch (error) {
       setCartMessage('❌ Failed to proceed with purchase')
       setTimeout(() => setCartMessage(''), 3000)
@@ -153,7 +147,22 @@ export default function ProductsPage() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '1.5rem' }}>
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h1 style={{ marginTop: 0, marginBottom: 0, color: '#0f172a' }}>Products</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <button
+                onClick={() => navigate(-1)}
+                style={{
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  background: 'white',
+                  color: '#374151',
+                  cursor: 'pointer'
+                }}
+              >
+                ← Back
+              </button>
+              <h1 style={{ marginTop: 0, marginBottom: 0, color: '#0f172a' }}>Products</h1>
+            </div>
             <button 
               onClick={() => window.location.href = '/cart'}
               style={{
