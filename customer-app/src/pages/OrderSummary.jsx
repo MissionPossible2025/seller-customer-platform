@@ -283,43 +283,154 @@ export default function OrderSummary() {
                 const product = item.product
                 const displayPrice = item.discountedPrice && item.discountedPrice < item.price ? item.discountedPrice : item.price
                 const itemTotal = displayPrice * item.quantity
+                const hasDiscount = item.discountedPrice && item.discountedPrice < item.price
+                const savings = hasDiscount ? (item.price - item.discountedPrice) * item.quantity : 0
 
                 return (
                   <div key={item.product._id} style={{
-                    display: 'flex',
-                    gap: '1rem',
-                    padding: '1rem',
+                    padding: '1.5rem',
                     border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    alignItems: 'center'
+                    borderRadius: '12px',
+                    background: '#fafafa'
                   }}>
-                    {product.photo && (
-                      <img 
-                        src={product.photo} 
-                        alt={product.name}
-                        style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '6px' }}
-                      />
-                    )}
-
-                    <div style={{ flex: 1 }}>
-                      <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1rem', color: '#0f172a' }}>{product.name}</h3>
-                      <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.875rem', color: '#64748b' }}>{product.description}</p>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontSize: '0.875rem', color: '#64748b' }}>Qty:</span>
-                        <button onClick={() => updateItemQuantity(product._id, item.quantity - 1)} disabled={item.quantity <= 1} style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #d1d5db', background: 'white', cursor: item.quantity <= 1 ? 'not-allowed' : 'pointer' }}>-</button>
-                        <span style={{ minWidth: '28px', textAlign: 'center', fontWeight: '600' }}>{item.quantity}</span>
-                        <button onClick={() => updateItemQuantity(product._id, item.quantity + 1)} style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #d1d5db', background: 'white', cursor: 'pointer' }}>+</button>
+                    {/* Product Header */}
+                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                      {product.photo && (
+                        <img 
+                          src={product.photo} 
+                          alt={product.name}
+                          style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }}
+                        />
+                      )}
+                      <div style={{ flex: 1 }}>
+                        <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', color: '#0f172a', fontWeight: '600' }}>
+                          {product.name}
+                        </h3>
+                        <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#64748b', lineHeight: '1.4' }}>
+                          {product.description}
+                        </p>
+                        <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                          Category: <span style={{ fontWeight: '500', color: '#0f172a' }}>{product.category}</span>
+                        </div>
                       </div>
                     </div>
 
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ marginBottom: '0.25rem' }}>
-                        <span style={{ fontSize: '1rem', fontWeight: '600', color: '#059669' }}>${displayPrice}</span>
-                        {item.discountedPrice && item.discountedPrice < item.price && (
-                          <span style={{ fontSize: '0.875rem', color: '#64748b', textDecoration: 'line-through', marginLeft: '0.5rem' }}>${item.price}</span>
-                        )}
+                    {/* Price and Quantity Details */}
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: '1fr 1fr', 
+                      gap: '1rem',
+                      padding: '1rem',
+                      background: 'white',
+                      borderRadius: '8px',
+                      border: '1px solid #e2e8f0'
+                    }}>
+                      {/* Quantity Section */}
+                      <div>
+                        <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', color: '#0f172a', fontWeight: '600' }}>
+                          Quantity
+                        </h4>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <button 
+                            onClick={() => updateItemQuantity(product._id, item.quantity - 1)} 
+                            disabled={item.quantity <= 1} 
+                            style={{ 
+                              width: '36px', 
+                              height: '36px', 
+                              borderRadius: '8px', 
+                              border: '2px solid #d1d5db', 
+                              background: 'white', 
+                              cursor: item.quantity <= 1 ? 'not-allowed' : 'pointer',
+                              fontSize: '1.1rem',
+                              fontWeight: '600',
+                              color: item.quantity <= 1 ? '#9ca3af' : '#374151',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            −
+                          </button>
+                          <div style={{
+                            minWidth: '50px',
+                            padding: '0.5rem',
+                            textAlign: 'center',
+                            fontWeight: '700',
+                            fontSize: '1.1rem',
+                            background: '#f8fafc',
+                            borderRadius: '8px',
+                            border: '1px solid #e2e8f0'
+                          }}>
+                            {item.quantity}
+                          </div>
+                          <button 
+                            onClick={() => updateItemQuantity(product._id, item.quantity + 1)} 
+                            style={{ 
+                              width: '36px', 
+                              height: '36px', 
+                              borderRadius: '8px', 
+                              border: '2px solid #d1d5db', 
+                              background: 'white', 
+                              cursor: 'pointer',
+                              fontSize: '1.1rem',
+                              fontWeight: '600',
+                              color: '#374151',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            +
+                          </button>
+                        </div>
                       </div>
-                      <div style={{ fontSize: '1rem', fontWeight: '600', color: '#0f172a' }}>${itemTotal.toFixed(2)}</div>
+
+                      {/* Price Section */}
+                      <div>
+                        <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', color: '#0f172a', fontWeight: '600' }}>
+                          Price Details
+                        </h4>
+                        <div style={{ display: 'grid', gap: '0.5rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.9rem', color: '#64748b' }}>Unit Price:</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <span style={{ fontSize: '1rem', fontWeight: '600', color: '#059669' }}>
+                                ${displayPrice}
+                              </span>
+                              {hasDiscount && (
+                                <span style={{ fontSize: '0.85rem', color: '#64748b', textDecoration: 'line-through' }}>
+                                  ${item.price}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.9rem', color: '#64748b' }}>Quantity:</span>
+                            <span style={{ fontSize: '1rem', fontWeight: '600', color: '#0f172a' }}>
+                              {item.quantity}
+                            </span>
+                          </div>
+
+                          {hasDiscount && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontSize: '0.9rem', color: '#dc2626', fontWeight: '500' }}>You Save:</span>
+                              <span style={{ fontSize: '1rem', fontWeight: '600', color: '#dc2626' }}>
+                                ${savings.toFixed(2)}
+                              </span>
+                            </div>
+                          )}
+
+                          <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '0.25rem 0' }} />
+                          
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '1rem', fontWeight: '600', color: '#0f172a' }}>Item Total:</span>
+                            <span style={{ fontSize: '1.2rem', fontWeight: '700', color: '#0f172a' }}>
+                              ${itemTotal.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )
@@ -337,23 +448,64 @@ export default function OrderSummary() {
               Order Total
             </h2>
             
-            <div style={{ display: 'grid', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Items ({cartItems.length})</span>
-                <span>${totalAmount.toFixed(2)}</span>
+            <div style={{ display: 'grid', gap: '0.75rem' }}>
+              {/* Items Breakdown */}
+              <div style={{ 
+                padding: '1rem', 
+                background: '#f8fafc', 
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0'
+              }}>
+                <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', color: '#0f172a', fontWeight: '600' }}>
+                  Items Breakdown
+                </h4>
+                <div style={{ display: 'grid', gap: '0.5rem' }}>
+                  {cartItems.map((item) => {
+                    const displayPrice = item.discountedPrice && item.discountedPrice < item.price ? item.discountedPrice : item.price
+                    const itemTotal = displayPrice * item.quantity
+                    return (
+                      <div key={item.product._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.9rem', color: '#64748b' }}>
+                          {item.product.name} × {item.quantity}
+                        </span>
+                        <span style={{ fontSize: '0.9rem', fontWeight: '500', color: '#0f172a' }}>
+                          ${itemTotal.toFixed(2)}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Shipping</span>
-                <span style={{ color: '#059669', fontWeight: '500' }}>Free</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Tax</span>
-                <span>$0.00</span>
-              </div>
-              <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '0.5rem 0' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.25rem', fontWeight: '600', color: '#0f172a' }}>
-                <span>Total Amount</span>
-                <span>${totalAmount.toFixed(2)}</span>
+
+              {/* Order Summary */}
+              <div style={{ display: 'grid', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '1rem', fontWeight: '500', color: '#0f172a' }}>
+                    Subtotal ({cartItems.length} items)
+                  </span>
+                  <span style={{ fontSize: '1rem', fontWeight: '600', color: '#0f172a' }}>
+                    ${totalAmount.toFixed(2)}
+                  </span>
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '1rem', color: '#64748b' }}>Shipping</span>
+                  <span style={{ color: '#059669', fontWeight: '600', fontSize: '1rem' }}>Free</span>
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '1rem', color: '#64748b' }}>Tax</span>
+                  <span style={{ fontSize: '1rem', fontWeight: '500', color: '#0f172a' }}>$0.00</span>
+                </div>
+                
+                <hr style={{ border: 'none', borderTop: '2px solid #e2e8f0', margin: '0.75rem 0' }} />
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '1.4rem', fontWeight: '700', color: '#0f172a' }}>Total Amount</span>
+                  <span style={{ fontSize: '1.4rem', fontWeight: '700', color: '#0f172a' }}>
+                    ${totalAmount.toFixed(2)}
+                  </span>
+                </div>
               </div>
             </div>
           </div>

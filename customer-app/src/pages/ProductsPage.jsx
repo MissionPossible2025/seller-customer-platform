@@ -1,19 +1,27 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import SearchBar from '../components/SearchBar'
 
 export default function ProductsPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [cartMessage, setCartMessage] = useState('')
+  const [quantity, setQuantity] = useState(1)
 
   useEffect(() => {
     fetchProducts()
-  }, [])
+    
+    // Check if search term was passed from Dashboard
+    const searchFromDashboard = location.state?.searchTerm
+    if (searchFromDashboard) {
+      setSearchTerm(searchFromDashboard)
+    }
+  }, [location.state])
 
   const fetchProducts = async () => {
     try {
@@ -83,15 +91,16 @@ export default function ProductsPage() {
         body: JSON.stringify({
           userId: userId,
           productId: product._id,
-          quantity: 1
+          quantity: quantity
         })
       })
 
       const data = await response.json()
       
       if (response.ok) {
-        setCartMessage('✅ Item added to cart successfully!')
+        setCartMessage(`✅ ${quantity} item(s) added to cart successfully!`)
         setTimeout(() => setCartMessage(''), 3000)
+        setQuantity(1) // Reset quantity after successful add
       } else {
         setCartMessage(`❌ ${data.error}`)
         setTimeout(() => setCartMessage(''), 3000)
@@ -219,7 +228,10 @@ export default function ProductsPage() {
                     <ProductCard 
                       key={product._id} 
                       product={product} 
-                      onClick={() => setSelectedProduct(product)}
+                      onClick={() => {
+                        setSelectedProduct(product)
+                        setQuantity(1) // Reset quantity when selecting a new product
+                      }}
                     />
                   ))}
                 </div>
@@ -368,16 +380,84 @@ export default function ProductsPage() {
                   </p>
                 </div>
                 
-                <div style={{ 
-                  fontSize: '1.1rem', 
-                  color: '#64748b',
-                  padding: '1.5rem',
-                  background: '#f8fafc',
-                  borderRadius: '12px',
-                  border: '1px solid #e2e8f0',
-                  marginBottom: '2rem'
-                }}>
-                  <strong style={{ color: '#0f172a' }}>Sold by:</strong> {selectedProduct.seller?.name || 'Unknown Seller'}
+                {/* Quantity Selection */}
+                <div style={{ marginBottom: '2rem' }}>
+                  <h3 style={{ 
+                    margin: '0 0 1rem 0', 
+                    color: '#0f172a', 
+                    fontSize: '1.3rem',
+                    fontWeight: '600'
+                  }}>
+                    Quantity
+                  </h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <button
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '8px',
+                        border: '2px solid #e2e8f0',
+                        background: 'white',
+                        color: '#64748b',
+                        fontSize: '1.2rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      −
+                    </button>
+                    <input
+                      type="number"
+                      value={quantity}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 1
+                        setQuantity(Math.max(1, Math.min(10, value)))
+                      }}
+                      min="1"
+                      max="10"
+                      style={{
+                        width: '80px',
+                        padding: '0.5rem',
+                        borderRadius: '8px',
+                        border: '2px solid #e2e8f0',
+                        background: 'white',
+                        fontSize: '1.1rem',
+                        fontWeight: '600',
+                        textAlign: 'center',
+                        outline: 'none'
+                      }}
+                    />
+                    <button
+                      onClick={() => setQuantity(Math.min(10, quantity + 1))}
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '8px',
+                        border: '2px solid #e2e8f0',
+                        background: 'white',
+                        color: '#64748b',
+                        fontSize: '1.2rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
+                  <p style={{ 
+                    margin: '0.5rem 0 0 0', 
+                    color: '#64748b', 
+                    fontSize: '0.9rem' 
+                  }}>
+                    Select quantity (1-10)
+                  </p>
                 </div>
 
                 {/* Cart Message */}
@@ -397,21 +477,6 @@ export default function ProductsPage() {
                   </div>
                 )}
 
-                {/* Debug User Info */}
-                <div style={{
-                  padding: '1rem',
-                  background: '#f8fafc',
-                  borderRadius: '8px',
-                  marginBottom: '1rem',
-                  border: '1px solid #e2e8f0',
-                  fontSize: '0.9rem',
-                  color: '#64748b'
-                }}>
-                  <strong>Debug Info:</strong>
-                  <div>User ID: {(getCurrentUser()?.user || getCurrentUser())?._id || (getCurrentUser()?.user || getCurrentUser())?.id || 'Not found'}</div>
-                  <div>Product ID: {selectedProduct?._id || 'Not found'}</div>
-                  <div>User Object: {JSON.stringify(getCurrentUser(), null, 2)}</div>
-                </div>
 
                 {/* Action Buttons */}
                 <div style={{ display: 'flex', gap: '1rem' }}>

@@ -137,7 +137,7 @@ export default function Dashboard({ user }) {
             </button>
             {/* Edit Item button removed to keep single edit entry point */}
             <button 
-              onClick={() => navigate("/update-delivery")}
+              onClick={() => navigate("/manage-orders")}
               style={{
                 padding: "1rem 2rem",
                 borderRadius: "8px",
@@ -152,7 +152,7 @@ export default function Dashboard({ user }) {
               onMouseOver={(e) => e.target.style.backgroundColor = "#535bf2"}
               onMouseOut={(e) => e.target.style.backgroundColor = "#646cff"}
             >
-              Update Delivery
+              Order Management
             </button>
           </div>
         )}

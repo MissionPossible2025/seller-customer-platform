@@ -1,9 +1,12 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import SearchBar from '../components/SearchBar'
 import UserProfileIcon from '../components/UserProfileIcon'
 import ProfileModal from '../components/ProfileModal'
 
 export default function Dashboard() {
+  const navigate = useNavigate()
+  
   const userPayload = (() => {
     try {
       return JSON.parse(localStorage.getItem('user') || 'null')
@@ -15,6 +18,18 @@ export default function Dashboard() {
   const name = userPayload?.user?.name || 'Customer'
   const [searchTerm, setSearchTerm] = useState('')
   const [showProfileModal, setShowProfileModal] = useState(false)
+
+  // Handle search functionality
+  const handleSearch = (e) => {
+    e.preventDefault()
+    if (searchTerm.trim()) {
+      // Navigate to products page with search term
+      navigate('/products', { state: { searchTerm: searchTerm.trim() } })
+    } else {
+      // Navigate to products page without search term
+      navigate('/products')
+    }
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
@@ -39,24 +54,24 @@ export default function Dashboard() {
       </div>
 
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '1.5rem' }}>
-        <div style={{ marginBottom: '1rem' }}>
+        <form onSubmit={handleSearch} style={{ marginBottom: '1rem' }}>
           <SearchBar 
             value={searchTerm}
             onChange={setSearchTerm}
             placeholder="Search products..."
           />
-        </div>
+        </form>
 
         <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(3, minmax(0,1fr))' }}>
           <button 
             style={cardButtonStyle}
-            onClick={() => window.location.href = '/products'}
+            onClick={() => navigate('/products')}
           >
             View Products
           </button>
           <button 
             style={cardButtonStyle}
-            onClick={() => window.location.href = '/cart'}
+            onClick={() => navigate('/cart')}
           >
             Your Cart
           </button>

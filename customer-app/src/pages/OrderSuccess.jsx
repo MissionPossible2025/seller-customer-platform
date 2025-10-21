@@ -98,7 +98,9 @@ export default function OrderSuccess() {
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#64748b' }}>Payment Method:</span>
               <span style={{ fontWeight: '500', textTransform: 'capitalize' }}>
-                {paymentMethod === 'netbanking' ? 'Net Banking' : 'UPI Payment'}
+                {paymentMethod === 'netbanking' ? 'Net Banking' : 
+                 paymentMethod === 'upi' ? 'UPI Payment' : 
+                 paymentMethod?.charAt(0).toUpperCase() + paymentMethod?.slice(1)}
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
