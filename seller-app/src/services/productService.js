@@ -48,6 +48,9 @@ export const updateProduct = async (productId, productData) => {
       if (value !== undefined && value !== null) {
         if (key === 'photoFile') {
           if (value) formData.append('photo', value);
+        } else if (key === 'attributes' || key === 'variants') {
+          // Send attributes and variants as JSON strings
+          formData.append(key, JSON.stringify(value));
         } else {
           formData.append(key, value);
         }

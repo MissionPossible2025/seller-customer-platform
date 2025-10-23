@@ -88,10 +88,15 @@ export default function ProductsPage() {
     // Find matching variant
     if (selectedProduct && selectedProduct.variants) {
       const matchingVariant = selectedProduct.variants.find(variant => {
+        // Check if all selected attributes match the variant combination
         return Object.entries(newSelectedAttributes).every(([attr, value]) => 
-          variant.combination.get && variant.combination.get(attr) === value
+          variant.combination && variant.combination[attr] === value
         )
       })
+      
+      console.log('Selected attributes:', newSelectedAttributes)
+      console.log('Matching variant:', matchingVariant)
+      
       setSelectedVariant(matchingVariant || null)
     }
   }

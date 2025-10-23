@@ -228,7 +228,19 @@ export const getProductById = async (req, res) => {
 // Update product
 export const updateProduct = async (req, res) => {
   try {
-    const { name, description, category, price, discountedPrice, stockStatus, photo, isActive } = req.body;
+    const { 
+      name, 
+      description, 
+      category, 
+      price, 
+      discountedPrice, 
+      stockStatus, 
+      photo, 
+      isActive,
+      hasVariations,
+      attributes,
+      variants
+    } = req.body;
 
     // Validate category if provided
     if (category) {
@@ -245,6 +257,60 @@ export const updateProduct = async (req, res) => {
       }
     }
 
+    // Parse multi-attribute data if provided
+    let parsedAttributes = [];
+    let parsedVariants = [];
+    if (hasVariations === 'true' && attributes && variants) {
+      try {
+        parsedAttributes = JSON.parse(attributes);
+        parsedVariants = JSON.parse(variants);
+        
+        if (!Array.isArray(parsedAttributes) || parsedAttributes.length === 0) {
+          return res.status(400).json({ 
+            error: 'Attributes must be a non-empty array when hasVariations is true' 
+          });
+        }
+        
+        if (!Array.isArray(parsedVariants) || parsedVariants.length === 0) {
+          return res.status(400).json({ 
+            error: 'Variants must be a non-empty array when hasVariations is true' 
+          });
+        }
+        
+        // Validate attributes
+        for (let i = 0; i < parsedAttributes.length; i++) {
+          const attr = parsedAttributes[i];
+          if (!attr.name || !attr.options || attr.options.length === 0) {
+            return res.status(400).json({ 
+              error: `Attribute ${i + 1} is missing required fields: name and options are required` 
+            });
+          }
+          for (let j = 0; j < attr.options.length; j++) {
+            const option = attr.options[j];
+            if (!option.name) {
+              return res.status(400).json({ 
+                error: `Option ${j + 1} in attribute "${attr.name}" is missing name` 
+              });
+            }
+          }
+        }
+        
+        // Validate variants
+        for (let i = 0; i < parsedVariants.length; i++) {
+          const variant = parsedVariants[i];
+          if (!variant.combination || !variant.price || !variant.stock) {
+            return res.status(400).json({ 
+              error: `Variant ${i + 1} is missing required fields: combination, price, and stock are required` 
+            });
+          }
+        }
+      } catch (error) {
+        return res.status(400).json({ 
+          error: 'Invalid JSON format for attributes or variants' 
+        });
+      }
+    }
+
     const updateData = {};
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
@@ -252,6 +318,10 @@ export const updateProduct = async (req, res) => {
     if (price !== undefined) updateData.price = price;
     if (discountedPrice !== undefined) updateData.discountedPrice = discountedPrice;
     if (stockStatus !== undefined) updateData.stockStatus = stockStatus;
+    if (hasVariations !== undefined) updateData.hasVariations = hasVariations === 'true';
+    if (attributes !== undefined) updateData.attributes = parsedAttributes;
+    if (variants !== undefined) updateData.variants = parsedVariants;
+    
     // If a new file is uploaded, override photo with the new public URL
     if (req.file) {
       const filename = req.file.filename;

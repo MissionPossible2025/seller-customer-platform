@@ -711,9 +711,10 @@ export default function AddItem({ user }) {
               {/* Product Variations Toggle */}
               <div style={{ 
                 padding: "1rem", 
-                background: "#f8f9fa", 
+                background: "#1e293b", 
                 borderRadius: "8px", 
-                border: "1px solid #e9ecef" 
+                border: "1px solid #334155",
+                color: "white"
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1rem" }}>
                   <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontWeight: "500" }}>
@@ -733,7 +734,7 @@ export default function AddItem({ user }) {
                     {/* Attributes Section */}
                     <div style={{ marginBottom: "2rem" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                        <h3 style={{ margin: 0, fontSize: "1.1rem", color: "#0f172a" }}>Product Attributes</h3>
+                        <h3 style={{ margin: 0, fontSize: "1.1rem", color: "white" }}>Product Attributes</h3>
                         <button
                           type="button"
                           onClick={addAttribute}
@@ -754,10 +755,11 @@ export default function AddItem({ user }) {
                       {attributes.map((attribute, attrIndex) => (
                         <div key={attrIndex} style={{
                           padding: "1rem",
-                          border: "1px solid #dee2e6",
+                          border: "1px solid #475569",
                           borderRadius: "6px",
                           marginBottom: "1rem",
-                          background: "white"
+                          background: "#334155",
+                          color: "white"
                         }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
                             <h4 style={{ margin: 0, fontSize: "1rem" }}>Attribute {attrIndex + 1}</h4>
@@ -857,19 +859,20 @@ export default function AddItem({ user }) {
                     {/* Generated Variants Section */}
                     {variants.length > 0 && (
                       <div>
-                        <h3 style={{ margin: "0 0 1rem 0", fontSize: "1.1rem", color: "#0f172a" }}>
+                        <h3 style={{ margin: "0 0 1rem 0", fontSize: "1.1rem", color: "white" }}>
                           Generated Variants ({variants.length})
                         </h3>
-                        <div style={{ maxHeight: "400px", overflowY: "auto", border: "1px solid #dee2e6", borderRadius: "6px" }}>
+                        <div style={{ maxHeight: "400px", overflowY: "auto", border: "1px solid #475569", borderRadius: "6px" }}>
                           {variants.map((variant, index) => (
                             <div key={index} style={{
                               padding: "1rem",
-                              borderBottom: index < variants.length - 1 ? "1px solid #e2e8f0" : "none",
-                              background: "white"
+                              borderBottom: index < variants.length - 1 ? "1px solid #475569" : "none",
+                              background: "#334155",
+                              color: "white"
                             }}>
                               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
                                 <div>
-                                  <h4 style={{ margin: 0, fontSize: "0.9rem", color: "#0f172a" }}>
+                                  <h4 style={{ margin: 0, fontSize: "0.9rem", color: "white" }}>
                                     {Object.entries(variant.combination).map(([key, value]) => `${key}: ${value}`).join(', ')}
                                   </h4>
                                 </div>

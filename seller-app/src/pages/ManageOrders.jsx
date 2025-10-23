@@ -50,49 +50,13 @@ export default function ManageOrders() {
     }
   };
 
-  // Handle delivery status update
-  const handleDeliveryUpdate = async (orderId, deliveryStatus) => {
-    try {
-      const response = await axios.put(`http://localhost:5000/api/orders/${orderId}/delivery`, {
-        deliveryStatus: deliveryStatus,
-        trackingNumber: trackingNumber
-      });
-
-      // Update local state
-      setOrders(prev => prev.map(order =>
-        order._id === orderId ? { ...order, deliveryStatus: deliveryStatus, trackingNumber: trackingNumber } : order
-      ));
-
-      setMessage(`Delivery status updated to ${deliveryStatus}!`);
-      setSelectedOrder(null);
-      setTrackingNumber('');
-      setTimeout(() => setMessage(''), 3000);
-    } catch (error) {
-      console.error("Failed to update delivery:", error);
-      setMessage('Failed to update delivery status');
-      setTimeout(() => setMessage(''), 3000);
-    }
-  };
 
   // Get status color
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending': return '#f59e0b';
-      case 'accepted': return '#3b82f6';
-      case 'shipped': return '#8b5cf6';
-      case 'delivered': return '#22c55e';
+      case 'accepted': return '#22c55e';
       case 'cancelled': return '#ef4444';
-      default: return '#6b7280';
-    }
-  };
-
-  // Get delivery status color
-  const getDeliveryStatusColor = (status) => {
-    switch (status) {
-      case 'pending': return '#f59e0b';
-      case 'shipped': return '#3b82f6';
-      case 'out_for_delivery': return '#8b5cf6';
-      case 'delivered': return '#22c55e';
       default: return '#6b7280';
     }
   };
@@ -132,7 +96,7 @@ export default function ManageOrders() {
       }}>
         <h2 style={{ marginBottom: "2rem", fontSize: "2rem" }}>Order Management</h2>
         <p style={{ marginBottom: "2rem", fontSize: "1.1rem", color: "#888" }}>
-          Manage all customer orders and track delivery status
+          Manage customer orders - Accept or Deny orders
         </p>
 
         {message && (
@@ -168,7 +132,6 @@ export default function ManageOrders() {
                   <th style={{ padding: "1rem", borderBottom: "1px solid #ccc", fontWeight: "600" }}>Items</th>
                   <th style={{ padding: "1rem", borderBottom: "1px solid #ccc", fontWeight: "600" }}>Total</th>
                   <th style={{ padding: "1rem", borderBottom: "1px solid #ccc", fontWeight: "600" }}>Status</th>
-                  <th style={{ padding: "1rem", borderBottom: "1px solid #ccc", fontWeight: "600" }}>Delivery</th>
                   <th style={{ padding: "1rem", borderBottom: "1px solid #ccc", fontWeight: "600" }}>Actions</th>
                 </tr>
               </thead>
@@ -189,28 +152,57 @@ export default function ManageOrders() {
                     </td>
                     <td style={{ padding: "1rem", fontWeight: "600" }}>${order.totalAmount?.toFixed(2)}</td>
                     <td style={{ padding: "1rem" }}>
-                      <span style={{
-                        padding: "0.25rem 0.75rem",
-                        borderRadius: "12px",
-                        backgroundColor: getStatusColor(order.status),
-                        color: "white",
-                        fontSize: "0.8rem",
-                        fontWeight: "500"
-                      }}>
-                        {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
-                      </span>
-                    </td>
-                    <td style={{ padding: "1rem" }}>
-                      <span style={{
-                        padding: "0.25rem 0.75rem",
-                        borderRadius: "12px",
-                        backgroundColor: getDeliveryStatusColor(order.deliveryStatus),
-                        color: "white",
-                        fontSize: "0.8rem",
-                        fontWeight: "500"
-                      }}>
-                        {order.deliveryStatus?.replace('_', ' ').charAt(0).toUpperCase() + order.deliveryStatus?.replace('_', ' ').slice(1)}
-                      </span>
+                      {order.status === 'pending' ? (
+                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                          <button 
+                            onClick={() => handleStatusUpdate(order._id, 'accepted')}
+                            style={{
+                              padding: "0.25rem 0.75rem",
+                              borderRadius: "6px",
+                              fontSize: "0.8rem",
+                              fontWeight: "500",
+                              cursor: "pointer",
+                              backgroundColor: "#22c55e",
+                              color: "white",
+                              border: "none",
+                              transition: "all 0.3s ease"
+                            }}
+                            onMouseOver={(e) => e.target.style.backgroundColor = "#16a34a"}
+                            onMouseOut={(e) => e.target.style.backgroundColor = "#22c55e"}
+                          >
+                            Accept
+                          </button>
+                          <button 
+                            onClick={() => handleStatusUpdate(order._id, 'cancelled')}
+                            style={{
+                              padding: "0.25rem 0.75rem",
+                              borderRadius: "6px",
+                              fontSize: "0.8rem",
+                              fontWeight: "500",
+                              cursor: "pointer",
+                              backgroundColor: "#ef4444",
+                              color: "white",
+                              border: "none",
+                              transition: "all 0.3s ease"
+                            }}
+                            onMouseOver={(e) => e.target.style.backgroundColor = "#dc2626"}
+                            onMouseOut={(e) => e.target.style.backgroundColor = "#ef4444"}
+                          >
+                            Deny
+                          </button>
+                        </div>
+                      ) : (
+                        <span style={{
+                          padding: "0.25rem 0.75rem",
+                          borderRadius: "12px",
+                          backgroundColor: getStatusColor(order.status),
+                          color: "white",
+                          fontSize: "0.8rem",
+                          fontWeight: "500"
+                        }}>
+                          {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
+                        </span>
+                      )}
                     </td>
                     <td style={{ padding: "1rem" }}>
                       <button 
@@ -331,53 +323,6 @@ export default function ManageOrders() {
                       <span style={{ fontWeight: "600", minWidth: "120px", color: "#374151" }}>Order Time:</span>
                       <span style={{ color: "#6b7280" }}>
                         {selectedOrder.createdAt ? new Date(selectedOrder.createdAt).toLocaleTimeString() : 'N/A'}
-                      </span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <span style={{ fontWeight: "600", minWidth: "120px", color: "#374151" }}>Order Status:</span>
-                      <span style={{
-                        padding: "0.25rem 0.75rem",
-                        borderRadius: "12px",
-                        backgroundColor: getStatusColor(selectedOrder.status),
-                        color: "white",
-                        fontSize: "0.8rem",
-                        fontWeight: "500"
-                      }}>
-                        {selectedOrder.status?.charAt(0).toUpperCase() + selectedOrder.status?.slice(1)}
-                      </span>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <span style={{ fontWeight: "600", minWidth: "120px", color: "#374151" }}>Delivery Status:</span>
-                      <span style={{
-                        padding: "0.25rem 0.75rem",
-                        borderRadius: "12px",
-                        backgroundColor: getDeliveryStatusColor(selectedOrder.deliveryStatus),
-                        color: "white",
-                        fontSize: "0.8rem",
-                        fontWeight: "500"
-                      }}>
-                        {selectedOrder.deliveryStatus?.replace('_', ' ').charAt(0).toUpperCase() + selectedOrder.deliveryStatus?.replace('_', ' ').slice(1)}
-                      </span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <span style={{ fontWeight: "600", minWidth: "120px", color: "#374151" }}>Payment Method:</span>
-                      <span style={{ color: "#6b7280" }}>
-                        {selectedOrder.paymentMethod || 'Credit Card'}
-                      </span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <span style={{ fontWeight: "600", minWidth: "120px", color: "#374151" }}>Payment Status:</span>
-                      <span style={{
-                        padding: "0.25rem 0.75rem",
-                        borderRadius: "12px",
-                        backgroundColor: selectedOrder.paymentStatus === 'paid' ? "#22c55e" : "#ef4444",
-                        color: "white",
-                        fontSize: "0.8rem",
-                        fontWeight: "500"
-                      }}>
-                        {selectedOrder.paymentStatus?.charAt(0).toUpperCase() + selectedOrder.paymentStatus?.slice(1) || 'Pending'}
                       </span>
                     </div>
                   </div>
@@ -565,7 +510,6 @@ export default function ManageOrders() {
                     display: "flex", 
                     justifyContent: "space-between", 
                     alignItems: "center",
-                    padding: "0.75rem 0",
                     backgroundColor: "#f3f4f6",
                     borderRadius: "8px",
                     padding: "1rem",
@@ -578,206 +522,6 @@ export default function ManageOrders() {
               </div>
             </div>
 
-            {/* Order Status History */}
-            <div style={{ marginBottom: "2rem" }}>
-              <h3 style={{ margin: "0 0 1rem 0", color: "#0f172a", fontSize: "1.2rem" }}>Order Timeline</h3>
-              <div style={{ 
-                padding: "1.5rem", 
-                background: "#f8fafc", 
-                borderRadius: "12px",
-                border: "1px solid #e2e8f0"
-              }}>
-                <div style={{ 
-                  display: "flex", 
-                  flexDirection: "column", 
-                  gap: "1rem",
-                  position: "relative"
-                }}>
-                  {/* Timeline line */}
-                  <div style={{
-                    position: "absolute",
-                    left: "6px",
-                    top: "12px",
-                    bottom: "12px",
-                    width: "2px",
-                    backgroundColor: "#e5e7eb",
-                    zIndex: 1
-                  }}></div>
-                  
-                  {/* Order Placed */}
-                  <div style={{ 
-                    display: "flex", 
-                    alignItems: "center", 
-                    gap: "1rem",
-                    position: "relative",
-                    zIndex: 2
-                  }}>
-                    <div style={{
-                      width: "14px",
-                      height: "14px",
-                      borderRadius: "50%",
-                      backgroundColor: "#22c55e",
-                      flexShrink: 0,
-                      border: "3px solid #ffffff",
-                      boxShadow: "0 0 0 2px #e5e7eb"
-                    }}></div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: "600", color: "#111827", marginBottom: "0.25rem" }}>
-                        Order Placed
-                      </div>
-                      <div style={{ fontSize: "0.9rem", color: "#6b7280" }}>
-                        {selectedOrder.createdAt ? new Date(selectedOrder.createdAt).toLocaleString() : 'N/A'}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Order Accepted */}
-                  {selectedOrder.status !== 'pending' && (
-                    <div style={{ 
-                      display: "flex", 
-                      alignItems: "center", 
-                      gap: "1rem",
-                      position: "relative",
-                      zIndex: 2
-                    }}>
-                      <div style={{
-                        width: "14px",
-                        height: "14px",
-                        borderRadius: "50%",
-                        backgroundColor: "#22c55e",
-                        flexShrink: 0,
-                        border: "3px solid #ffffff",
-                        boxShadow: "0 0 0 2px #e5e7eb"
-                      }}></div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: "600", color: "#111827", marginBottom: "0.25rem" }}>
-                          Order Accepted
-                        </div>
-                        <div style={{ fontSize: "0.9rem", color: "#6b7280" }}>
-                          {selectedOrder.acceptedAt ? new Date(selectedOrder.acceptedAt).toLocaleString() : 'Recently'}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Shipped */}
-                  {(selectedOrder.status === 'shipped' || selectedOrder.deliveryStatus === 'shipped' || selectedOrder.deliveryStatus === 'out_for_delivery' || selectedOrder.deliveryStatus === 'delivered') && (
-                    <div style={{ 
-                      display: "flex", 
-                      alignItems: "center", 
-                      gap: "1rem",
-                      position: "relative",
-                      zIndex: 2
-                    }}>
-                      <div style={{
-                        width: "14px",
-                        height: "14px",
-                        borderRadius: "50%",
-                        backgroundColor: "#22c55e",
-                        flexShrink: 0,
-                        border: "3px solid #ffffff",
-                        boxShadow: "0 0 0 2px #e5e7eb"
-                      }}></div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: "600", color: "#111827", marginBottom: "0.25rem" }}>
-                          Order Shipped
-                        </div>
-                        <div style={{ fontSize: "0.9rem", color: "#6b7280" }}>
-                          {selectedOrder.shippedAt ? new Date(selectedOrder.shippedAt).toLocaleString() : 'Recently'}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Out for Delivery */}
-                  {(selectedOrder.deliveryStatus === 'out_for_delivery' || selectedOrder.deliveryStatus === 'delivered') && (
-                    <div style={{ 
-                      display: "flex", 
-                      alignItems: "center", 
-                      gap: "1rem",
-                      position: "relative",
-                      zIndex: 2
-                    }}>
-                      <div style={{
-                        width: "14px",
-                        height: "14px",
-                        borderRadius: "50%",
-                        backgroundColor: "#22c55e",
-                        flexShrink: 0,
-                        border: "3px solid #ffffff",
-                        boxShadow: "0 0 0 2px #e5e7eb"
-                      }}></div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: "600", color: "#111827", marginBottom: "0.25rem" }}>
-                          Out for Delivery
-                        </div>
-                        <div style={{ fontSize: "0.9rem", color: "#6b7280" }}>
-                          {selectedOrder.outForDeliveryAt ? new Date(selectedOrder.outForDeliveryAt).toLocaleString() : 'Recently'}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Delivered */}
-                  {selectedOrder.deliveryStatus === 'delivered' && (
-                    <div style={{ 
-                      display: "flex", 
-                      alignItems: "center", 
-                      gap: "1rem",
-                      position: "relative",
-                      zIndex: 2
-                    }}>
-                      <div style={{
-                        width: "14px",
-                        height: "14px",
-                        borderRadius: "50%",
-                        backgroundColor: "#22c55e",
-                        flexShrink: 0,
-                        border: "3px solid #ffffff",
-                        boxShadow: "0 0 0 2px #e5e7eb"
-                      }}></div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: "600", color: "#111827", marginBottom: "0.25rem" }}>
-                          Delivered
-                        </div>
-                        <div style={{ fontSize: "0.9rem", color: "#6b7280" }}>
-                          {selectedOrder.deliveredAt ? new Date(selectedOrder.deliveredAt).toLocaleString() : 'Recently'}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Cancelled */}
-                  {selectedOrder.status === 'cancelled' && (
-                    <div style={{ 
-                      display: "flex", 
-                      alignItems: "center", 
-                      gap: "1rem",
-                      position: "relative",
-                      zIndex: 2
-                    }}>
-                      <div style={{
-                        width: "14px",
-                        height: "14px",
-                        borderRadius: "50%",
-                        backgroundColor: "#ef4444",
-                        flexShrink: 0,
-                        border: "3px solid #ffffff",
-                        boxShadow: "0 0 0 2px #e5e7eb"
-                      }}></div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: "600", color: "#111827", marginBottom: "0.25rem" }}>
-                          Order Cancelled
-                        </div>
-                        <div style={{ fontSize: "0.9rem", color: "#6b7280" }}>
-                          {selectedOrder.cancelledAt ? new Date(selectedOrder.cancelledAt).toLocaleString() : 'Recently'}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
 
             {/* Order Notes */}
             <div style={{ marginBottom: "2rem" }}>
@@ -812,56 +556,6 @@ export default function ManageOrders() {
               </div>
             </div>
 
-            {/* Tracking Number Input */}
-            <div style={{ marginBottom: "2rem" }}>
-              <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>
-                Tracking Number (Optional)
-              </label>
-              <div style={{ display: "flex", gap: "0.5rem" }}>
-                <input
-                  type="text"
-                  value={trackingNumber}
-                  onChange={(e) => setTrackingNumber(e.target.value)}
-                  placeholder="Enter tracking number"
-                  style={{
-                    flex: 1,
-                    padding: "0.75rem",
-                    borderRadius: "8px",
-                    border: "1px solid #d1d5db",
-                    fontSize: "1rem"
-                  }}
-                />
-                {trackingNumber && (
-                  <button
-                    onClick={() => {
-                      // Add functionality to save tracking number
-                      console.log('Tracking number saved:', trackingNumber);
-                      alert('Tracking number saved successfully!');
-                    }}
-                    style={{
-                      padding: "0.75rem 1rem",
-                      borderRadius: "8px",
-                      fontSize: "0.9rem",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      backgroundColor: "#3b82f6",
-                      color: "white",
-                      border: "none",
-                      transition: "all 0.3s ease"
-                    }}
-                    onMouseOver={(e) => e.target.style.backgroundColor = "#2563eb"}
-                    onMouseOut={(e) => e.target.style.backgroundColor = "#3b82f6"}
-                  >
-                    Save
-                  </button>
-                )}
-              </div>
-              {selectedOrder.trackingNumber && (
-                <div style={{ marginTop: "0.5rem", fontSize: "0.9rem", color: "#059669" }}>
-                  <strong>Current Tracking:</strong> {selectedOrder.trackingNumber}
-                </div>
-              )}
-            </div>
 
             {/* Action Buttons */}
             <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
@@ -901,72 +595,11 @@ export default function ManageOrders() {
                     onMouseOver={(e) => e.target.style.backgroundColor = "#dc2626"}
                     onMouseOut={(e) => e.target.style.backgroundColor = "#ef4444"}
                   >
-                    Cancel Order
+                    Deny Order
                   </button>
                 </>
               )}
 
-              {selectedOrder.status === 'accepted' && (
-                <>
-                  <button 
-                    onClick={() => handleDeliveryUpdate(selectedOrder._id, 'shipped')}
-                    style={{
-                      padding: "0.75rem 1.5rem",
-                      borderRadius: "8px",
-                      fontSize: "1rem",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      backgroundColor: "#3b82f6",
-                      color: "white",
-                      border: "none",
-                      transition: "all 0.3s ease"
-                    }}
-                    onMouseOver={(e) => e.target.style.backgroundColor = "#2563eb"}
-                    onMouseOut={(e) => e.target.style.backgroundColor = "#3b82f6"}
-                  >
-                    Mark as Shipped
-                  </button>
-                  <button 
-                    onClick={() => handleDeliveryUpdate(selectedOrder._id, 'out_for_delivery')}
-                    style={{
-                      padding: "0.75rem 1.5rem",
-                      borderRadius: "8px",
-                      fontSize: "1rem",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      backgroundColor: "#8b5cf6",
-                      color: "white",
-                      border: "none",
-                      transition: "all 0.3s ease"
-                    }}
-                    onMouseOver={(e) => e.target.style.backgroundColor = "#7c3aed"}
-                    onMouseOut={(e) => e.target.style.backgroundColor = "#8b5cf6"}
-                  >
-                    Out for Delivery
-                  </button>
-                </>
-              )}
-
-              {(selectedOrder.status === 'shipped' || selectedOrder.deliveryStatus === 'out_for_delivery') && (
-                <button 
-                  onClick={() => handleDeliveryUpdate(selectedOrder._id, 'delivered')}
-                  style={{
-                    padding: "0.75rem 1.5rem",
-                    borderRadius: "8px",
-                    fontSize: "1rem",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    backgroundColor: "#22c55e",
-                    color: "white",
-                    border: "none",
-                    transition: "all 0.3s ease"
-                  }}
-                  onMouseOver={(e) => e.target.style.backgroundColor = "#16a34a"}
-                  onMouseOut={(e) => e.target.style.backgroundColor = "#22c55e"}
-                >
-                  Mark as Delivered
-                </button>
-              )}
             </div>
           </div>
         </div>

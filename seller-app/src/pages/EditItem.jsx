@@ -97,6 +97,8 @@ export default function EditItem() {
     }
     setAttributes(newAttributes);
     setItem(prev => ({ ...prev, attributes: newAttributes }));
+    // Regenerate variants when attributes change
+    generateVariants(newAttributes);
   };
 
   // Add new attribute
@@ -108,6 +110,8 @@ export default function EditItem() {
     const newAttributes = [...attributes, newAttribute];
     setAttributes(newAttributes);
     setItem(prev => ({ ...prev, attributes: newAttributes }));
+    // Regenerate variants when attributes change
+    generateVariants(newAttributes);
   };
 
   // Remove attribute
@@ -115,6 +119,8 @@ export default function EditItem() {
     const newAttributes = attributes.filter((_, i) => i !== index);
     setAttributes(newAttributes);
     setItem(prev => ({ ...prev, attributes: newAttributes }));
+    // Regenerate variants when attributes change
+    generateVariants(newAttributes);
   };
 
   // Add option to attribute
@@ -123,6 +129,8 @@ export default function EditItem() {
     newAttributes[attrIndex].options.push({ name: '', displayName: '' });
     setAttributes(newAttributes);
     setItem(prev => ({ ...prev, attributes: newAttributes }));
+    // Regenerate variants when options change
+    generateVariants(newAttributes);
   };
 
   // Remove option from attribute
@@ -131,6 +139,75 @@ export default function EditItem() {
     newAttributes[attrIndex].options = newAttributes[attrIndex].options.filter((_, i) => i !== optionIndex);
     setAttributes(newAttributes);
     setItem(prev => ({ ...prev, attributes: newAttributes }));
+    // Regenerate variants when options change
+    generateVariants(newAttributes);
+  };
+
+  // Generate all possible combinations of attributes
+  const generateVariants = (attrs) => {
+    try {
+      if (attrs.length === 0) {
+        setVariants([]);
+        return;
+      }
+
+      // Get all valid attributes with at least one option
+      const validAttributes = attrs.filter(attr => 
+        attr.name && attr.options && attr.options.length > 0 && 
+        attr.options.every(opt => opt.name)
+      );
+
+      if (validAttributes.length === 0) {
+        setVariants([]);
+        return;
+      }
+
+      // Generate cartesian product of all attribute options
+      const combinations = validAttributes.reduce((acc, attr) => {
+        if (acc.length === 0) {
+          return attr.options.map(opt => ({ [attr.name]: opt.name }));
+        }
+        const newCombinations = [];
+        acc.forEach(combo => {
+          attr.options.forEach(opt => {
+            newCombinations.push({ ...combo, [attr.name]: opt.name });
+          });
+        });
+        return newCombinations;
+      }, []);
+
+      // Create variants from combinations, preserving existing prices if available
+      const newVariants = combinations.map((combo, index) => {
+        // Check if this combination already exists in current variants
+        const existingVariant = variants.find(v => 
+          JSON.stringify(v.combination) === JSON.stringify(combo)
+        );
+        
+        return {
+          combination: combo,
+          price: existingVariant ? existingVariant.price : 0,
+          discountedPrice: existingVariant ? existingVariant.discountedPrice : 0,
+          stock: existingVariant ? existingVariant.stock : 'in_stock',
+          images: existingVariant ? existingVariant.images : [],
+          isActive: existingVariant ? existingVariant.isActive : true
+        };
+      });
+
+      setVariants(newVariants);
+    } catch (error) {
+      console.error('Error generating variants:', error);
+    }
+  };
+
+  // Update variant properties
+  const updateVariant = (variantIndex, field, value) => {
+    const newVariants = [...variants];
+    newVariants[variantIndex] = {
+      ...newVariants[variantIndex],
+      [field]: value
+    };
+    setVariants(newVariants);
+    setItem(prev => ({ ...prev, variants: newVariants }));
   };
 
   const handleSave = async () => {
@@ -139,11 +216,34 @@ export default function EditItem() {
       return;
     }
 
+    // Validate variants if hasVariations is true
+    if (item.hasVariations) {
+      if (variants.length === 0) {
+        alert("No variants generated. Please check your attributes and options.");
+        return;
+      }
+      
+      for (let i = 0; i < variants.length; i++) {
+        const variant = variants[i];
+        if (variant.price <= 0) {
+          alert(`Please enter a valid price for variant ${i + 1}`);
+          return;
+        }
+      }
+    }
+
     setSaving(true);
     setError("");
 
     try {
-      const response = await updateProduct(id, item);
+      // Include attributes and variants in the item data
+      const itemToSave = {
+        ...item,
+        attributes: item.hasVariations ? attributes : [],
+        variants: item.hasVariations ? variants : []
+      };
+
+      const response = await updateProduct(id, itemToSave);
       
       if (response.message) {
         alert("Product updated successfully!");
@@ -340,22 +440,24 @@ export default function EditItem() {
           {item.hasVariations && (
             <div style={{ 
               padding: "1rem", 
-              backgroundColor: "#f8f9fa", 
-              borderRadius: "6px", 
-              border: "1px solid #e9ecef" 
+              backgroundColor: "#1e293b", 
+              borderRadius: "8px", 
+              border: "1px solid #334155",
+              color: "white"
             }}>
-              <h4 style={{ margin: "0 0 1rem 0", color: "#333" }}>Product Variations</h4>
+              <h4 style={{ margin: "0 0 1rem 0", color: "white" }}>Product Variations</h4>
               
               {/* Attributes */}
               <div style={{ marginBottom: "1rem" }}>
-                <h5 style={{ margin: "0 0 0.5rem 0", color: "#555" }}>Attributes (Size, Color, etc.)</h5>
+                <h5 style={{ margin: "0 0 0.5rem 0", color: "white" }}>Attributes (Size, Color, etc.)</h5>
                 {attributes.map((attr, attrIndex) => (
                   <div key={attrIndex} style={{ 
                     padding: "1rem", 
-                    border: "1px solid #ddd", 
-                    borderRadius: "4px", 
-                    marginBottom: "0.5rem",
-                    backgroundColor: "white"
+                    border: "1px solid #475569", 
+                    borderRadius: "6px", 
+                    marginBottom: "1rem",
+                    backgroundColor: "#334155",
+                    color: "white"
                   }}>
                     <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
                       <input 
@@ -476,66 +578,177 @@ export default function EditItem() {
                   + Add Attribute
                 </button>
               </div>
+
+              {/* Generated Variants Section */}
+              {variants.length > 0 && (
+                <div style={{ marginTop: "2rem" }}>
+                  <h5 style={{ margin: "0 0 1rem 0", color: "white" }}>
+                    Generated Variants ({variants.length})
+                  </h5>
+                  <div style={{ maxHeight: "400px", overflowY: "auto", border: "1px solid #475569", borderRadius: "6px" }}>
+                    {variants.map((variant, index) => (
+                      <div key={index} style={{
+                        padding: "1rem",
+                        borderBottom: index < variants.length - 1 ? "1px solid #475569" : "none",
+                        background: "#334155",
+                        color: "white"
+                      }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                          <div>
+                            <h6 style={{ margin: 0, fontSize: "0.9rem", color: "white" }}>
+                              {Object.entries(variant.combination).map(([key, value]) => `${key}: ${value}`).join(', ')}
+                            </h6>
+                          </div>
+                        </div>
+
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "1rem" }}>
+                          <div>
+                            <label style={{ display: "block", marginBottom: "0.25rem", fontSize: "0.8rem", fontWeight: "500" }}>
+                              Price ($) *
+                            </label>
+                            <input
+                              type="number"
+                              value={variant.price}
+                              onChange={(e) => updateVariant(index, 'price', parseFloat(e.target.value) || 0)}
+                              step="0.01"
+                              style={{
+                                width: "100%",
+                                padding: "0.5rem",
+                                borderRadius: "4px",
+                                border: "1px solid #ccc",
+                                fontSize: "0.9rem"
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: "block", marginBottom: "0.25rem", fontSize: "0.8rem", fontWeight: "500" }}>
+                              Discounted Price ($)
+                            </label>
+                            <input
+                              type="number"
+                              value={variant.discountedPrice}
+                              onChange={(e) => updateVariant(index, 'discountedPrice', parseFloat(e.target.value) || 0)}
+                              step="0.01"
+                              style={{
+                                width: "100%",
+                                padding: "0.5rem",
+                                borderRadius: "4px",
+                                border: "1px solid #ccc",
+                                fontSize: "0.9rem"
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: "block", marginBottom: "0.25rem", fontSize: "0.8rem", fontWeight: "500" }}>
+                              Stock Status
+                            </label>
+                            <select
+                              value={variant.stock}
+                              onChange={(e) => updateVariant(index, 'stock', e.target.value)}
+                              style={{
+                                width: "100%",
+                                padding: "0.5rem",
+                                borderRadius: "4px",
+                                border: "1px solid #ccc",
+                                fontSize: "0.9rem"
+                              }}
+                            >
+                              <option value="in_stock">In Stock</option>
+                              <option value="out_of_stock">Out of Stock</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ display: "block", marginBottom: "0.25rem", fontSize: "0.8rem", fontWeight: "500" }}>
+                              Images (Optional)
+                            </label>
+                            <input
+                              type="file"
+                              multiple
+                              accept="image/*"
+                              onChange={(e) => {
+                                const files = Array.from(e.target.files);
+                                const imageUrls = files.map(file => URL.createObjectURL(file));
+                                updateVariant(index, 'images', imageUrls);
+                              }}
+                              style={{
+                                width: "100%",
+                                padding: "0.5rem",
+                                borderRadius: "4px",
+                                border: "1px solid #ccc",
+                                fontSize: "0.9rem"
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Price and Stock */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-            <div>
-              <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>Price:</label>
-              <input 
-                type="number" 
-                name="price" 
-                value={item.price} 
-                onChange={handleChange}
-                style={{
-                  width: "100%",
-                  padding: "0.75rem",
-                  borderRadius: "6px",
-                  border: "1px solid #ccc",
-                  fontSize: "1rem"
-                }}
-                placeholder="Enter price"
-              />
-            </div>
-            <div>
-              <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>Discounted Price:</label>
-              <input 
-                type="number" 
-                name="discountedPrice" 
-                value={item.discountedPrice} 
-                onChange={handleChange}
-                style={{
-                  width: "100%",
-                  padding: "0.75rem",
-                  borderRadius: "6px",
-                  border: "1px solid #ccc",
-                  fontSize: "1rem"
-                }}
-                placeholder="Enter discounted price"
-              />
-            </div>
-          </div>
+          {/* Price and Stock - Only show if no variations */}
+          {!item.hasVariations && (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                <div>
+                  <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>Price:</label>
+                  <input 
+                    type="number" 
+                    name="price" 
+                    value={item.price} 
+                    onChange={handleChange}
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem",
+                      borderRadius: "6px",
+                      border: "1px solid #ccc",
+                      fontSize: "1rem"
+                    }}
+                    placeholder="Enter price"
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>Discounted Price:</label>
+                  <input 
+                    type="number" 
+                    name="discountedPrice" 
+                    value={item.discountedPrice} 
+                    onChange={handleChange}
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem",
+                      borderRadius: "6px",
+                      border: "1px solid #ccc",
+                      fontSize: "1rem"
+                    }}
+                    placeholder="Enter discounted price"
+                  />
+                </div>
+              </div>
 
-          {/* Stock Status */}
-          <div>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>Stock Status:</label>
-            <select 
-              name="stockStatus" 
-              value={item.stockStatus} 
-              onChange={handleChange}
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                borderRadius: "6px",
-                border: "1px solid #ccc",
-                fontSize: "1rem"
-              }}
-            >
-              <option value="in_stock">In Stock</option>
-              <option value="out_of_stock">Out of Stock</option>
-            </select>
-          </div>
+              {/* Stock Status */}
+              <div>
+                <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>Stock Status:</label>
+                <select 
+                  name="stockStatus" 
+                  value={item.stockStatus} 
+                  onChange={handleChange}
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem",
+                    borderRadius: "6px",
+                    border: "1px solid #ccc",
+                    fontSize: "1rem"
+                  }}
+                >
+                  <option value="in_stock">In Stock</option>
+                  <option value="out_of_stock">Out of Stock</option>
+                </select>
+              </div>
+            </>
+          )}
 
           {/* Product Photo */}
           <div>
