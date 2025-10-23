@@ -10,7 +10,7 @@ export default function AddItem({ user }) {
     productId: "",
     name: "",
     description: "",
-    stock: 0,
+    stockStatus: "in_stock",
     price: 0,
     discountedPrice: 0,
     photo: "",
@@ -26,15 +26,16 @@ export default function AddItem({ user }) {
   const [attributes, setAttributes] = useState([]);
   const [variants, setVariants] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategory, setNewCategory] = useState({ name: '', description: '' });
   const navigate = useNavigate();
-
-  const categories = ["Electronics", "Clothing", "Books", "Furniture"];
 
   // Product templates for each category
   const productTemplates = {
-    Electronics: {
-      description: "Enter product specifications, features, and technical details",
-      placeholder: "e.g., 64GB storage, 12MP camera, 6.1-inch display, wireless charging",
+    Tools: {
+      description: "Enter tool specifications, features, and technical details",
+      placeholder: "e.g., Steel construction, Ergonomic handle, Professional grade, 2-year warranty",
       fields: {
         brand: "Brand",
         model: "Model",
@@ -42,37 +43,77 @@ export default function AddItem({ user }) {
         warranty: "Warranty Period"
       }
     },
-    Clothing: {
-      description: "Enter clothing details, size information, and material",
-      placeholder: "e.g., Cotton blend, Machine washable, Available in S, M, L, XL",
+    Machineries: {
+      description: "Enter machinery details, specifications, and operational requirements",
+      placeholder: "e.g., Heavy duty construction, 220V operation, Safety features included, Operator manual provided",
       fields: {
         brand: "Brand",
-        material: "Material",
-        sizes: "Available Sizes",
-        careInstructions: "Care Instructions"
+        model: "Model",
+        specifications: "Technical Specifications",
+        powerRequirements: "Power Requirements"
       }
     },
-    Books: {
-      description: "Enter book details, author information, and publication details",
-      placeholder: "e.g., Hardcover, 300 pages, Published 2023, ISBN: 978-1234567890",
-      fields: {
-        author: "Author",
-        publisher: "Publisher",
-        isbn: "ISBN",
-        pages: "Number of Pages"
-      }
-    },
-    Furniture: {
-      description: "Enter furniture details, dimensions, and material information",
-      placeholder: "e.g., Solid wood construction, Dimensions: 120cm x 60cm x 75cm, Assembly required",
+    Fasteners: {
+      description: "Enter fastener details, materials, and specifications",
+      placeholder: "e.g., Stainless steel, Metric thread, Corrosion resistant, Industrial grade",
       fields: {
         material: "Material",
-        dimensions: "Dimensions",
-        assembly: "Assembly Required",
-        weight: "Weight"
+        threadType: "Thread Type",
+        size: "Size",
+        finish: "Finish"
+      }
+    },
+    Gloves: {
+      description: "Enter glove details, materials, and safety specifications",
+      placeholder: "e.g., Cut resistant, Chemical resistant, Size M, EN388 certified",
+      fields: {
+        material: "Material",
+        size: "Size",
+        safetyRating: "Safety Rating",
+        certification: "Certification"
+      }
+    },
+    Others: {
+      description: "Enter product details and specifications",
+      placeholder: "e.g., Custom specifications, Special features, Usage instructions",
+      fields: {
+        brand: "Brand",
+        specifications: "Specifications",
+        features: "Special Features",
+        instructions: "Usage Instructions"
       }
     }
   };
+
+  // Fetch categories from API
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/categories`);
+      setCategories(response.data.categories || []);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
+
+  // Add new category
+  const addNewCategory = async () => {
+    if (!newCategory.name.trim()) return;
+    
+    try {
+      const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/categories`, newCategory);
+      setCategories(prev => [...prev, response.data.category]);
+      setNewCategory({ name: '', description: '' });
+      setShowAddCategory(false);
+    } catch (error) {
+      console.error('Error adding category:', error);
+      alert('Error adding category: ' + (error.response?.data?.error || error.message));
+    }
+  };
+
+  // Load categories on component mount
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
   const handleCategorySelect = (category) => {
     setSelectedCategory(category);
@@ -312,8 +353,8 @@ export default function AddItem({ user }) {
         alert("Please enter a valid price");
         return;
       }
-      if (productData.stock < 0) {
-        alert("Please enter a valid stock quantity");
+      if (!productData.stockStatus) {
+        alert("Please select a stock status");
         return;
       }
     }
@@ -354,7 +395,7 @@ export default function AddItem({ user }) {
         if (productToSave.discountedPrice !== undefined && productToSave.discountedPrice !== null) {
           formData.append('discountedPrice', productToSave.discountedPrice);
         }
-        formData.append('stock', productToSave.stock);
+        formData.append('stockStatus', productToSave.stockStatus);
       }
       
       formData.append('seller', productToSave.seller);
@@ -386,7 +427,7 @@ export default function AddItem({ user }) {
       productId: "",
       name: "",
       description: "",
-      stock: 0,
+      stockStatus: "in_stock",
       price: 0,
       discountedPrice: 0,
       photo: "",
@@ -437,7 +478,7 @@ export default function AddItem({ user }) {
             }}>
         {categories.map((cat) => (
                 <div
-            key={cat}
+            key={cat.name || cat}
             style={{
                     padding: "1.5rem",
                     border: "2px solid #ccc",
@@ -448,7 +489,7 @@ export default function AddItem({ user }) {
                     fontWeight: "500",
                     fontSize: "1.1rem"
                   }}
-                  onClick={() => handleCategorySelect(cat)}
+                  onClick={() => handleCategorySelect(cat.name || cat)}
                   onMouseOver={(e) => {
                     e.target.style.backgroundColor = "#646cff";
                     e.target.style.color = "white";
@@ -458,10 +499,134 @@ export default function AddItem({ user }) {
                     e.target.style.color = "inherit";
                   }}
           >
-            {cat}
+            {cat.name || cat}
                 </div>
               ))}
+              
+              {/* Add Category Button */}
+              <div
+                style={{
+                  padding: "1.5rem",
+                  border: "2px dashed #646cff",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  background: "transparent",
+                  transition: "all 0.3s ease",
+                  fontWeight: "500",
+                  fontSize: "1.1rem",
+                  color: "#646cff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "0.5rem"
+                }}
+                onClick={() => setShowAddCategory(true)}
+                onMouseOver={(e) => {
+                  e.target.style.backgroundColor = "#646cff";
+                  e.target.style.color = "white";
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.backgroundColor = "transparent";
+                  e.target.style.color = "#646cff";
+                }}
+              >
+                + Add New Category
+              </div>
             </div>
+            
+            {/* Add Category Modal */}
+            {showAddCategory && (
+              <div style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: "rgba(0, 0, 0, 0.5)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 1000
+              }}>
+                <div style={{
+                  backgroundColor: "white",
+                  padding: "2rem",
+                  borderRadius: "8px",
+                  width: "90%",
+                  maxWidth: "500px"
+                }}>
+                  <h3 style={{ marginBottom: "1rem" }}>Add New Category</h3>
+                  <div style={{ marginBottom: "1rem" }}>
+                    <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
+                      Category Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={newCategory.name}
+                      onChange={(e) => setNewCategory(prev => ({ ...prev, name: e.target.value }))}
+                      style={{
+                        width: "100%",
+                        padding: "0.75rem",
+                        border: "1px solid #ccc",
+                        borderRadius: "4px",
+                        fontSize: "1rem"
+                      }}
+                      placeholder="Enter category name"
+                    />
+                  </div>
+                  <div style={{ marginBottom: "1rem" }}>
+                    <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
+                      Description
+                    </label>
+                    <textarea
+                      value={newCategory.description}
+                      onChange={(e) => setNewCategory(prev => ({ ...prev, description: e.target.value }))}
+                      style={{
+                        width: "100%",
+                        padding: "0.75rem",
+                        border: "1px solid #ccc",
+                        borderRadius: "4px",
+                        fontSize: "1rem",
+                        minHeight: "80px",
+                        resize: "vertical"
+                      }}
+                      placeholder="Enter category description (optional)"
+                    />
+                  </div>
+                  <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
+                    <button
+                      onClick={() => {
+                        setShowAddCategory(false);
+                        setNewCategory({ name: '', description: '' });
+                      }}
+                      style={{
+                        padding: "0.75rem 1.5rem",
+                        border: "1px solid #ccc",
+                        borderRadius: "4px",
+                        background: "white",
+                        cursor: "pointer"
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={addNewCategory}
+                      disabled={!newCategory.name.trim()}
+                      style={{
+                        padding: "0.75rem 1.5rem",
+                        border: "none",
+                        borderRadius: "4px",
+                        background: newCategory.name.trim() ? "#646cff" : "#ccc",
+                        color: "white",
+                        cursor: newCategory.name.trim() ? "pointer" : "not-allowed"
+                      }}
+                    >
+                      Add Category
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div>
@@ -541,44 +706,7 @@ export default function AddItem({ user }) {
                 />
               </div>
 
-              {/* Seller Information Display */}
-              <div style={{ 
-                padding: "1rem", 
-                background: "#f8f9fa", 
-                borderRadius: "6px", 
-                border: "1px solid #e9ecef" 
-              }}>
-                <h4 style={{ margin: "0 0 0.5rem 0", color: "#495057", fontSize: "1rem" }}>Seller Information</h4>
-                <div style={{ fontSize: "0.9rem", color: "#6c757d", marginBottom: "1rem" }}>
-                  <div><strong>Name:</strong> {productData.sellerName || "Not available"}</div>
-                  <div><strong>Email:</strong> {productData.sellerEmail || "Not available"}</div>
-                  <div><strong>Seller ID:</strong> {productData.seller || "Not available"}</div>
-                </div>
-                
-                {/* Manual User ID Input */}
-                <div>
-                  <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500", fontSize: "0.9rem" }}>
-                    User ID (if different from Seller ID)
-                  </label>
-                  <input
-                    type="text"
-                    name="userId"
-                    value={productData.userId || productData.seller}
-                    onChange={handleChange}
-                    placeholder="Enter your User ID"
-                    style={{
-                      width: "100%",
-                      padding: "0.5rem",
-                      borderRadius: "4px",
-                      border: "1px solid #ccc",
-                      fontSize: "0.9rem"
-                    }}
-                  />
-                  <div style={{ fontSize: "0.8rem", color: "#6c757d", marginTop: "0.25rem" }}>
-                    This is used for cart functionality. Usually same as Seller ID.
-                  </div>
-                </div>
-              </div>
+              {/* Seller info removed from UI but still sent with request */}
 
               {/* Product Variations Toggle */}
               <div style={{ 
@@ -841,12 +969,11 @@ export default function AddItem({ user }) {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                     <div>
                       <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-                        Stock Quantity
+                        Stock Status
                       </label>
-                      <input
-                        type="number"
-                        name="stock"
-                        value={productData.stock}
+                      <select
+                        name="stockStatus"
+                        value={productData.stockStatus}
                         onChange={handleChange}
                         style={{
                           width: "100%",
@@ -855,7 +982,10 @@ export default function AddItem({ user }) {
                           border: "1px solid #ccc",
                           fontSize: "1rem"
                         }}
-                      />
+                      >
+                        <option value="in_stock">In Stock</option>
+                        <option value="out_of_stock">Out of Stock</option>
+                      </select>
                     </div>
                     <div>
                       <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>

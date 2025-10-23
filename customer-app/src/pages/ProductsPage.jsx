@@ -15,8 +15,23 @@ export default function ProductsPage() {
   const [selectedVariant, setSelectedVariant] = useState(null)
   const [selectedAttributes, setSelectedAttributes] = useState({})
 
+  // Fetch categories from API
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/categories`)
+      const data = await response.json()
+      
+      if (!response.ok) throw new Error(data.error || 'Failed to fetch categories')
+      
+      setCategories(data.categories || [])
+    } catch (err) {
+      console.error('Error fetching categories:', err)
+    }
+  }
+
   useEffect(() => {
     fetchProducts()
+    fetchCategories()
     
     // Check if search term was passed from Dashboard
     const searchFromDashboard = location.state?.searchTerm
@@ -54,7 +69,7 @@ export default function ProductsPage() {
     return acc
   }, {})
 
-  const categories = ['Electronics', 'Clothing', 'Books', 'Furniture']
+  const [categories, setCategories] = useState([])
 
   // Get current user from localStorage
   const getCurrentUser = () => {
@@ -271,11 +286,12 @@ export default function ProductsPage() {
           </div>
         ) : (
           categories.map(category => {
-            const categoryProducts = productsByCategory[category]
+            const categoryName = category.name || category
+            const categoryProducts = productsByCategory[categoryName]
             if (!categoryProducts || categoryProducts.length === 0) return null
 
             return (
-              <div key={category} style={{ marginBottom: '3rem' }}>
+              <div key={categoryName} style={{ marginBottom: '3rem' }}>
                 <h2 style={{ 
                   marginBottom: '1rem', 
                   color: '#0f172a', 
@@ -283,7 +299,7 @@ export default function ProductsPage() {
                   borderBottom: '2px solid #e2e8f0',
                   paddingBottom: '0.5rem'
                 }}>
-                  {category}
+                  {categoryName}
                 </h2>
                 
                 <div style={{ 
@@ -732,7 +748,7 @@ export default function ProductsPage() {
 
 function ProductCard({ product, onClick }) {
   // Handle pricing for products with multi-attribute variations
-  let displayPrice, hasDiscount, priceRange;
+  let displayPrice, hasDiscount;
   
   if (product.hasVariations && product.variants && product.variants.length > 0) {
     const prices = product.variants
@@ -740,24 +756,23 @@ function ProductCard({ product, onClick }) {
       .map(v => v.discountedPrice && v.discountedPrice < v.price ? v.discountedPrice : v.price);
     
     if (prices.length === 0) {
-      priceRange = "Out of Stock";
+      displayPrice = null; // Will show "Out of Stock"
     } else {
       const minPrice = Math.min(...prices);
-      const maxPrice = Math.max(...prices);
-      
-      if (minPrice === maxPrice) {
-        displayPrice = minPrice;
-        hasDiscount = false;
-      } else {
-        priceRange = `$${minPrice} - $${maxPrice}`;
-        hasDiscount = false;
-      }
+      displayPrice = minPrice;
+      hasDiscount = false; // For variations, we don't show discount in the card
     }
   } else {
-    displayPrice = product.discountedPrice && product.discountedPrice < product.price 
-      ? product.discountedPrice 
-      : product.price;
-    hasDiscount = product.discountedPrice && product.discountedPrice < product.price;
+    // For products without variations, check base stock status
+    if (product.stockStatus === 'out_of_stock') {
+      displayPrice = null;
+      hasDiscount = false;
+    } else {
+      displayPrice = product.discountedPrice && product.discountedPrice < product.price 
+        ? product.discountedPrice 
+        : product.price;
+      hasDiscount = product.discountedPrice && product.discountedPrice < product.price;
+    }
   }
 
   return (
@@ -821,15 +836,17 @@ function ProductCard({ product, onClick }) {
       )}
       
       <div style={{ marginBottom: '1rem' }}>
-        {priceRange ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ 
-              fontSize: '1.2rem', 
-              fontWeight: '700', 
-              color: '#059669' 
-            }}>
-              {priceRange}
-            </span>
+        {displayPrice === null ? (
+          <div style={{ 
+            fontSize: '1.1rem', 
+            fontWeight: '600', 
+            color: '#dc2626',
+            background: '#fef2f2',
+            padding: '0.5rem 0.75rem',
+            borderRadius: '6px',
+            textAlign: 'center'
+          }}>
+            Out of Stock
           </div>
         ) : (
           <>
@@ -858,6 +875,16 @@ function ProductCard({ product, onClick }) {
                 fontWeight: '600' 
               }}>
                 Save ${(product.price - product.discountedPrice).toFixed(2)}
+              </div>
+            )}
+            {product.hasVariations && product.variants && product.variants.length > 0 && (
+              <div style={{ 
+                fontSize: '0.8rem', 
+                color: '#64748b',
+                fontStyle: 'italic',
+                marginTop: '0.25rem'
+              }}>
+                Starting from ${displayPrice}
               </div>
             )}
           </>

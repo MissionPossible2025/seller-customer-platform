@@ -1,8 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
 
 export default function ProductForm({ product }) {
   const [prodData, setProdData] = useState(product);
   const [editing, setEditing] = useState(true);
+  const [categories, setCategories] = useState([]);
+
+  // Fetch categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/categories`);
+        setCategories(response.data.categories || []);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -29,6 +44,21 @@ export default function ProductForm({ product }) {
         disabled={!editing}
       /><br />
 
+      <select
+        name="category"
+        value={prodData.category || ''}
+        onChange={handleChange}
+        disabled={!editing}
+        style={{ marginBottom: "10px", padding: "5px" }}
+      >
+        <option value="">Select Category</option>
+        {categories.map((cat) => (
+          <option key={cat.name || cat} value={cat.name || cat}>
+            {cat.name || cat}
+          </option>
+        ))}
+      </select><br />
+
       <input
         name="description"
         placeholder="Description"
@@ -37,14 +67,16 @@ export default function ProductForm({ product }) {
         disabled={!editing}
       /><br />
 
-      <input
-        name="stock"
-        type="number"
-        placeholder="Current Stock"
-        value={prodData.stock}
+      <select
+        name="stockStatus"
+        value={prodData.stockStatus || 'in_stock'}
         onChange={handleChange}
         disabled={!editing}
-      /><br />
+        style={{ marginBottom: "10px", padding: "5px" }}
+      >
+        <option value="in_stock">In Stock</option>
+        <option value="out_of_stock">Out of Stock</option>
+      </select><br />
 
       <input
         name="price"

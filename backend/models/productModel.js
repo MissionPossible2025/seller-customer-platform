@@ -22,7 +22,7 @@ const productSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: ['Electronics', 'Clothing', 'Books', 'Furniture']
+    trim: true
   },
   // Base price (for products without variations)
   price: {
@@ -33,11 +33,11 @@ const productSchema = new mongoose.Schema({
     type: Number,
     min: 0
   },
-  // Stock (for products without variations)
-  stock: {
-    type: Number,
-    min: 0,
-    default: 0
+  // Stock status (for products without variations)
+  stockStatus: {
+    type: String,
+    enum: ['in_stock', 'out_of_stock'],
+    default: 'in_stock'
   },
       // Multi-attribute variations system
       attributes: [{

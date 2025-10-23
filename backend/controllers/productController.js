@@ -11,7 +11,7 @@ export const createProduct = async (req, res) => {
       category, 
       price, 
       discountedPrice, 
-      stock, 
+      stockStatus, 
       seller, 
       sellerName, 
       sellerEmail,
@@ -27,11 +27,16 @@ export const createProduct = async (req, res) => {
       });
     }
 
-    // Validate category
-    const validCategories = ['Electronics', 'Clothing', 'Books', 'Furniture'];
-    if (!validCategories.includes(category)) {
+    // Validate category exists in database
+    const Category = (await import('../models/categoryModel.js')).default;
+    const categoryExists = await Category.findOne({ 
+      name: category, 
+      isActive: true 
+    });
+    
+    if (!categoryExists) {
       return res.status(400).json({ 
-        error: 'Invalid category. Must be one of: Electronics, Clothing, Books, Furniture' 
+        error: 'Invalid category. Please select a valid category.' 
       });
     }
 
@@ -120,16 +125,16 @@ export const createProduct = async (req, res) => {
       variants: parsedVariants
     };
 
-    // Add base price/stock only if no variations
+    // Add base price/stockStatus only if no variations
     if (!productData.hasVariations) {
-      if (!price || !stock) {
+      if (!price || !stockStatus) {
         return res.status(400).json({ 
-          error: 'Price and stock are required when hasVariations is false' 
+          error: 'Price and stockStatus are required when hasVariations is false' 
         });
       }
       productData.price = parseFloat(price);
       productData.discountedPrice = discountedPrice ? parseFloat(discountedPrice) : parseFloat(price);
-      productData.stock = parseInt(stock);
+      productData.stockStatus = stockStatus;
     }
 
     // Create new product
@@ -223,14 +228,19 @@ export const getProductById = async (req, res) => {
 // Update product
 export const updateProduct = async (req, res) => {
   try {
-    const { name, description, category, price, discountedPrice, stock, photo, isActive } = req.body;
+    const { name, description, category, price, discountedPrice, stockStatus, photo, isActive } = req.body;
 
     // Validate category if provided
     if (category) {
-      const validCategories = ['Electronics', 'Clothing', 'Books', 'Furniture'];
-      if (!validCategories.includes(category)) {
+      const Category = (await import('../models/categoryModel.js')).default;
+      const categoryExists = await Category.findOne({ 
+        name: category, 
+        isActive: true 
+      });
+      
+      if (!categoryExists) {
         return res.status(400).json({ 
-          error: 'Invalid category. Must be one of: Electronics, Clothing, Books, Furniture' 
+          error: 'Invalid category. Please select a valid category.' 
         });
       }
     }
@@ -241,7 +251,7 @@ export const updateProduct = async (req, res) => {
     if (category !== undefined) updateData.category = category;
     if (price !== undefined) updateData.price = price;
     if (discountedPrice !== undefined) updateData.discountedPrice = discountedPrice;
-    if (stock !== undefined) updateData.stock = stock;
+    if (stockStatus !== undefined) updateData.stockStatus = stockStatus;
     // If a new file is uploaded, override photo with the new public URL
     if (req.file) {
       const filename = req.file.filename;
