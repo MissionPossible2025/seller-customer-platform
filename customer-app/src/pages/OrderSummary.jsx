@@ -71,10 +71,34 @@ export default function OrderSummary() {
     try {
       const userData = localStorage.getItem('user')
       const parsedUser = JSON.parse(userData)
-      const actualUser = parsedUser.user || parsedUser
-      const userId = actualUser._id || actualUser.id
+      
+      // Handle different user data structures
+      let userId
+      if (parsedUser.customer && parsedUser.customer._id) {
+        userId = parsedUser.customer._id
+      } else if (parsedUser.user && parsedUser.user._id) {
+        userId = parsedUser.user._id
+      } else if (parsedUser._id) {
+        userId = parsedUser._id
+      } else if (parsedUser.id) {
+        userId = parsedUser.id
+      }
+      
+      if (!userId) {
+        setMessage('❌ User ID not found. Please log in again.')
+        setTimeout(() => setMessage(''), 3000)
+        return
+      }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/${userId}`, {
+      // Determine which API endpoint to use based on user data structure
+      const isCustomerLogin = parsedUser.customer && parsedUser.customer._id
+      const apiEndpoint = isCustomerLogin 
+        ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/customers/${userId}`
+        : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/${userId}`
+
+      console.log('OrderSummary: Using API endpoint:', apiEndpoint)
+
+      const response = await fetch(apiEndpoint, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -90,9 +114,22 @@ export default function OrderSummary() {
       
       if (response.ok) {
         // Update localStorage with new user data
-        const updatedUserData = {
-          ...parsedUser,
-          user: data.user
+        let updatedUserData
+        if (parsedUser.customer) {
+          // Handle customer login structure
+          updatedUserData = {
+            ...parsedUser,
+            customer: data.customer || data.user
+          }
+        } else if (parsedUser.user) {
+          // Handle user login structure
+          updatedUserData = {
+            ...parsedUser,
+            user: data.user
+          }
+        } else {
+          // Handle direct user structure
+          updatedUserData = data.user
         }
         localStorage.setItem('user', JSON.stringify(updatedUserData))
         

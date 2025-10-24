@@ -48,19 +48,41 @@ const addCustomer = async (req, res) => {
 const updateCustomer = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, phone } = req.body;
+    const { name, phone, address } = req.body;
 
-    const customer = await Customer.findByIdAndUpdate(
-      id,
-      { name, phone, updatedAt: Date.now() },
-      { new: true, runValidators: true }
-    );
-
+    // Find the customer first
+    const customer = await Customer.findById(id);
     if (!customer) {
       return res.status(404).json({ error: 'Customer not found' });
     }
 
-    res.json(customer);
+    // Update fields if provided
+    if (name) customer.name = name.trim();
+    if (phone) customer.phone = phone;
+    if (address) {
+      customer.address = {
+        street: address.street || customer.address.street,
+        city: address.city || customer.address.city,
+        state: address.state || customer.address.state,
+        pincode: address.pincode || customer.address.pincode,
+        country: address.country || customer.address.country || 'India'
+      };
+    }
+
+    // Check if profile is complete
+    const isProfileComplete = Boolean(
+      customer.name && customer.name.trim() &&
+      customer.phone && customer.phone.trim() &&
+      customer.address.street && customer.address.street.trim() &&
+      customer.address.city && customer.address.city.trim() &&
+      customer.address.state && customer.address.state.trim() &&
+      customer.address.pincode && customer.address.pincode.trim()
+    );
+    
+    customer.profileComplete = isProfileComplete;
+
+    await customer.save();
+    res.json({ message: "Profile updated successfully", customer });
   } catch (error) {
     console.error('Error updating customer:', error);
     if (error.code === 11000) {

@@ -1,30 +1,17 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ProfileModal from '../components/ProfileModal'
+import { useCart } from '../hooks/useCart'
+import { getCurrentUser, getUserId, getUserObject, isProfileComplete } from '../utils/userUtils'
 
 export default function CartPage() {
   const navigate = useNavigate()
-  const [cart, setCart] = useState(null)
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [user, setUser] = useState(null)
+  const { cart, loading, fetchCart, updateCartItem, removeFromCart, clearCart } = useCart()
 
-  // Get current user from localStorage
-  const getCurrentUser = () => {
-    const userData = localStorage.getItem('user')
-    return userData ? JSON.parse(userData) : null
-  }
-
-  // Check if profile is complete
-  const isProfileComplete = (userData) => {
-    if (!userData) return false
-    const actualUser = userData.user || userData
-    return actualUser.name && actualUser.phone && 
-      actualUser.address?.street && actualUser.address?.city && 
-      actualUser.address?.state && actualUser.address?.pincode
-  }
 
   // Handle checkout process
   const handleCheckout = () => {
@@ -38,7 +25,8 @@ export default function CartPage() {
     }
 
     // Proceed with checkout - navigate to order summary
-    const actualUser = userData.user || userData
+    const actualUser = getUserObject(userData)
+
     const checkoutData = {
       user: {
         name: actualUser.name,
@@ -55,144 +43,68 @@ export default function CartPage() {
   }
 
   // Fetch cart data
-  const fetchCart = async () => {
+  const fetchCartData = async () => {
     try {
       const user = getCurrentUser()
       if (!user) {
         setError('Please log in to view your cart')
-        setLoading(false)
         return
       }
 
-      // Handle nested user object structure
-      const actualUser = user.user || user
-      const userId = actualUser._id || actualUser.id
+      const userId = getUserId(user)
       
       if (!userId) {
         setError('User ID not found. Please log in again.')
-        setLoading(false)
         return
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cart/${userId}`)
-      const data = await response.json()
-      
-      if (response.ok) {
-        setCart(data.cart)
-      } else {
-        setError(data.error || 'Failed to fetch cart')
-      }
+      await fetchCart()
     } catch (err) {
       setError('Failed to fetch cart')
-    } finally {
-      setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchCart()
+    fetchCartData()
     const userData = getCurrentUser()
     setUser(userData)
   }, [])
 
   // Update item quantity
   const updateQuantity = async (productId, newQuantity) => {
-    try {
-      const user = getCurrentUser()
-      const actualUser = user.user || user
-      const userId = actualUser._id || actualUser.id
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cart/update`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: userId,
-          productId: productId,
-          quantity: newQuantity
-        })
-      })
-
-      const data = await response.json()
-      
-      if (response.ok) {
-        setCart(data.cart)
-        setMessage('Cart updated successfully!')
-        setTimeout(() => setMessage(''), 3000)
-      } else {
-        setMessage(`❌ ${data.error}`)
-        setTimeout(() => setMessage(''), 3000)
-      }
-    } catch (error) {
-      setMessage('❌ Failed to update cart')
+    const result = await updateCartItem(productId, newQuantity)
+    
+    if (result.success) {
+      setMessage(`✅ ${result.message}`)
+      setTimeout(() => setMessage(''), 3000)
+    } else {
+      setMessage(`❌ ${result.message}`)
       setTimeout(() => setMessage(''), 3000)
     }
   }
 
   // Remove item from cart
   const removeItem = async (productId) => {
-    try {
-      const user = getCurrentUser()
-      const actualUser = user.user || user
-      const userId = actualUser._id || actualUser.id
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cart/remove`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: userId,
-          productId: productId
-        })
-      })
-
-      const data = await response.json()
-      
-      if (response.ok) {
-        setCart(data.cart)
-        setMessage('Item removed from cart!')
-        setTimeout(() => setMessage(''), 3000)
-      } else {
-        setMessage(`❌ ${data.error}`)
-        setTimeout(() => setMessage(''), 3000)
-      }
-    } catch (error) {
-      setMessage('❌ Failed to remove item')
+    const result = await removeFromCart(productId)
+    
+    if (result.success) {
+      setMessage(`✅ ${result.message}`)
+      setTimeout(() => setMessage(''), 3000)
+    } else {
+      setMessage(`❌ ${result.message}`)
       setTimeout(() => setMessage(''), 3000)
     }
   }
 
   // Clear entire cart
-  const clearCart = async () => {
-    try {
-      const user = getCurrentUser()
-      const actualUser = user.user || user
-      const userId = actualUser._id || actualUser.id
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cart/clear`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: userId
-        })
-      })
-
-      const data = await response.json()
-      
-      if (response.ok) {
-        setCart(data.cart)
-        setMessage('Cart cleared successfully!')
-        setTimeout(() => setMessage(''), 3000)
-      } else {
-        setMessage(`❌ ${data.error}`)
-        setTimeout(() => setMessage(''), 3000)
-      }
-    } catch (error) {
-      setMessage('❌ Failed to clear cart')
+  const clearCartItems = async () => {
+    const result = await clearCart()
+    
+    if (result.success) {
+      setMessage(`✅ ${result.message}`)
+      setTimeout(() => setMessage(''), 3000)
+    } else {
+      setMessage(`❌ ${result.message}`)
       setTimeout(() => setMessage(''), 3000)
     }
   }
@@ -300,7 +212,7 @@ export default function CartPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                   <h2 style={{ margin: 0, color: '#0f172a' }}>Cart Items ({cartItems.length})</h2>
                   <button 
-                    onClick={clearCart}
+                    onClick={clearCartItems}
                     style={{
                       padding: '0.5rem 1rem',
                       borderRadius: '6px',

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import SearchBar from '../components/SearchBar'
+import { useCart } from '../hooks/useCart'
+import { getCurrentUser, getUserId } from '../utils/userUtils'
 
 export default function ProductsPage() {
   const navigate = useNavigate()
@@ -14,6 +16,7 @@ export default function ProductsPage() {
   const [quantity, setQuantity] = useState(1)
   const [selectedVariant, setSelectedVariant] = useState(null)
   const [selectedAttributes, setSelectedAttributes] = useState({})
+  const { cartItemCount, fetchCartCount, addToCart: addToCartHook } = useCart()
 
   // Fetch categories from API
   const fetchCategories = async () => {
@@ -29,9 +32,11 @@ export default function ProductsPage() {
     }
   }
 
+
   useEffect(() => {
     fetchProducts()
     fetchCategories()
+    fetchCartCount()
     
     // Check if search term was passed from Dashboard
     const searchFromDashboard = location.state?.searchTerm
@@ -71,11 +76,6 @@ export default function ProductsPage() {
 
   const [categories, setCategories] = useState([])
 
-  // Get current user from localStorage
-  const getCurrentUser = () => {
-    const userData = localStorage.getItem('user')
-    return userData ? JSON.parse(userData) : null
-  }
 
   // Handle attribute selection for multi-attribute products
   const handleAttributeSelection = (attributeName, optionName) => {
@@ -124,76 +124,25 @@ export default function ProductsPage() {
 
   // Handle Add to Cart
   const handleAddToCart = async (product) => {
-    try {
-      const user = getCurrentUser()
-      if (!user) {
-        setCartMessage('Please log in to add items to cart')
+    // Check if product has variations and a variant is selected
+    if (product.hasVariations && product.variants && product.variants.length > 0) {
+      if (!selectedVariant) {
+        setCartMessage('Please select a variant before adding to cart')
         setTimeout(() => setCartMessage(''), 3000)
         return
       }
+    }
 
-      // Check if product has variations and a variant is selected
-      if (product.hasVariations && product.variants && product.variants.length > 0) {
-        if (!selectedVariant) {
-          setCartMessage('Please select a variant before adding to cart')
-          setTimeout(() => setCartMessage(''), 3000)
-          return
-        }
-      }
-
-      console.log('User object:', user) // Debug log
-      console.log('Product object:', product) // Debug log
-
-      // Use user._id or user.id depending on what's available
-      // Handle nested user object structure: {token: 'dummy-token', user: {...}}
-      const actualUser = user.user || user
-      const userId = actualUser._id || actualUser.id
-      if (!userId) {
-        setCartMessage('❌ User ID not found. Please log in again.')
-        setTimeout(() => setCartMessage(''), 3000)
-        return
-      }
-
-      const cartData = {
-        userId: userId,
-        productId: product._id,
-        quantity: quantity
-      };
-
-      // Add variant data if product has variations
-      if (product.hasVariations && selectedVariant) {
-        cartData.variant = {
-          combination: selectedVariant.combination,
-          price: selectedVariant.discountedPrice && selectedVariant.discountedPrice < selectedVariant.price 
-            ? selectedVariant.discountedPrice 
-            : selectedVariant.price,
-          originalPrice: selectedVariant.price,
-          stock: selectedVariant.stock
-        };
-      }
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cart/add`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(cartData)
-      })
-
-      const data = await response.json()
-      
-      if (response.ok) {
-        setCartMessage(`✅ ${quantity} item(s) added to cart successfully!`)
-        setTimeout(() => setCartMessage(''), 3000)
-        setQuantity(1) // Reset quantity after successful add
-        setSelectedVariant(null) // Reset selected variant
-        setSelectedAttributes({}) // Reset selected attributes
-      } else {
-        setCartMessage(`❌ ${data.error}`)
-        setTimeout(() => setCartMessage(''), 3000)
-      }
-    } catch (error) {
-      setCartMessage('❌ Failed to add item to cart')
+    const result = await addToCartHook(product, quantity, selectedVariant)
+    
+    if (result.success) {
+      setCartMessage(`✅ ${result.message}`)
+      setTimeout(() => setCartMessage(''), 3000)
+      setQuantity(1) // Reset quantity after successful add
+      setSelectedVariant(null) // Reset selected variant
+      setSelectedAttributes({}) // Reset selected attributes
+    } else {
+      setCartMessage(`❌ ${result.message}`)
       setTimeout(() => setCartMessage(''), 3000)
     }
   }
@@ -204,6 +153,13 @@ export default function ProductsPage() {
       const user = getCurrentUser()
       if (!user) {
         setCartMessage('Please log in to proceed with purchase')
+        setTimeout(() => setCartMessage(''), 3000)
+        return
+      }
+
+      const userId = getUserId(user)
+      if (!userId) {
+        setCartMessage('❌ User ID not found. Please log in again.')
         setTimeout(() => setCartMessage(''), 3000)
         return
       }
@@ -275,7 +231,23 @@ export default function ProductsPage() {
                 gap: '0.5rem'
               }}
             >
-              🛒 View Cart
+              <span>🛒 View Cart</span>
+              {cartItemCount > 0 && (
+                <span style={{
+                  background: '#3b82f6',
+                  color: 'white',
+                  borderRadius: '50%',
+                  width: '24px',
+                  height: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.8rem',
+                  fontWeight: '600'
+                }}>
+                  {cartItemCount}
+                </span>
+              )}
             </button>
           </div>
           <SearchBar 

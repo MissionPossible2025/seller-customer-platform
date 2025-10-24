@@ -27,7 +27,16 @@ export default function ProfileModal({ isOpen, onClose }) {
       const userData = localStorage.getItem('user')
       if (userData) {
         const parsedUser = JSON.parse(userData)
-        const actualUser = parsedUser.user || parsedUser
+        
+        // Handle different user data structures
+        let actualUser
+        if (parsedUser.customer) {
+          actualUser = parsedUser.customer
+        } else if (parsedUser.user) {
+          actualUser = parsedUser.user
+        } else {
+          actualUser = parsedUser
+        }
         
         setUser(actualUser)
         setFormData({
@@ -73,10 +82,41 @@ export default function ProfileModal({ isOpen, onClose }) {
     try {
       const userData = localStorage.getItem('user')
       const parsedUser = JSON.parse(userData)
-      const actualUser = parsedUser.user || parsedUser
-      const userId = actualUser._id || actualUser.id
+      
+      // Handle different user data structures
+      console.log('ProfileModal: User data from localStorage:', parsedUser)
+      
+      let userId
+      if (parsedUser.customer && parsedUser.customer._id) {
+        userId = parsedUser.customer._id
+        console.log('ProfileModal: Found customer ID:', userId)
+      } else if (parsedUser.user && parsedUser.user._id) {
+        userId = parsedUser.user._id
+        console.log('ProfileModal: Found user ID:', userId)
+      } else if (parsedUser._id) {
+        userId = parsedUser._id
+        console.log('ProfileModal: Found direct _id:', userId)
+      } else if (parsedUser.id) {
+        userId = parsedUser.id
+        console.log('ProfileModal: Found alternative id:', userId)
+      }
+      
+      if (!userId) {
+        console.log('ProfileModal: No valid user ID found')
+        setMessage('❌ User ID not found. Please log in again.')
+        setTimeout(() => setMessage(''), 3000)
+        return
+      }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/${userId}`, {
+      // Determine which API endpoint to use based on user data structure
+      const isCustomerLogin = parsedUser.customer && parsedUser.customer._id
+      const apiEndpoint = isCustomerLogin 
+        ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/customers/${userId}`
+        : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/${userId}`
+
+      console.log('ProfileModal: Using API endpoint:', apiEndpoint)
+
+      const response = await fetch(apiEndpoint, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -88,9 +128,22 @@ export default function ProfileModal({ isOpen, onClose }) {
       
       if (response.ok) {
         // Update localStorage with new user data
-        const updatedUserData = {
-          ...parsedUser,
-          user: data.user
+        let updatedUserData
+        if (parsedUser.customer) {
+          // Handle customer login structure
+          updatedUserData = {
+            ...parsedUser,
+            customer: data.customer || data.user
+          }
+        } else if (parsedUser.user) {
+          // Handle user login structure
+          updatedUserData = {
+            ...parsedUser,
+            user: data.user
+          }
+        } else {
+          // Handle direct user structure
+          updatedUserData = data.user
         }
         localStorage.setItem('user', JSON.stringify(updatedUserData))
         

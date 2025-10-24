@@ -11,7 +11,7 @@ export const addToCart = async (req, res) => {
       return res.status(400).json({ error: 'User ID and Product ID are required' });
     }
 
-    console.log('Cart request - userId:', userId, 'productId:', productId, 'variation:', variation); // Debug log
+    console.log('Cart request - userId:', userId, 'productId:', productId, 'variant:', variant); // Debug log
 
     // Check if product exists
     const product = await Product.findById(productId);
