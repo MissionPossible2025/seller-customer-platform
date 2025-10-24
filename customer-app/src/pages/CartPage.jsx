@@ -517,7 +517,7 @@ export default function CartPage() {
                   }}
                   onClick={handleCheckout}
                 >
-                  {profileComplete ? 'Proceed to Checkout' : 'Complete Profile First'}
+                  {profileComplete ? 'Place Order' : 'Complete Profile First'}
                 </button>
 
                 <button 

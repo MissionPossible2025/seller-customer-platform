@@ -21,10 +21,14 @@ export default function ProductsPage() {
   // Fetch categories from API
   const fetchCategories = async () => {
     try {
-      const response = await fetch(`₹{import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/categories`)
-      const data = await response.json()
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/categories`)
       
-      if (!response.ok) throw new Error(data.error || 'Failed to fetch categories')
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to fetch categories')
+      }
+      
+      const data = await response.json()
       
       setCategories(data.categories || [])
     } catch (err) {
@@ -48,10 +52,14 @@ export default function ProductsPage() {
   const fetchProducts = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`₹{import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/products`)
-      const data = await response.json()
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/products`)
       
-      if (!response.ok) throw new Error(data.error || 'Failed to fetch products')
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to fetch products')
+      }
+      
+      const data = await response.json()
       
       console.log('Fetched products:', data.products) // Debug log
       
@@ -144,13 +152,13 @@ export default function ProductsPage() {
     const result = await addToCartHook(product, quantity, selectedVariant)
     
     if (result.success) {
-      setCartMessage(`✅ ₹{result.message}`)
+      setCartMessage(`✅ ${result.message}`)
       setTimeout(() => setCartMessage(''), 3000)
       setQuantity(1) // Reset quantity after successful add
       setSelectedVariant(null) // Reset selected variant
       setSelectedAttributes({}) // Reset selected attributes
     } else {
-      setCartMessage(`❌ ₹{result.message}`)
+      setCartMessage(`❌ ${result.message}`)
       setTimeout(() => setCartMessage(''), 3000)
     }
   }
@@ -454,7 +462,7 @@ export default function ProductsPage() {
                       }}>
                         <div style={{ marginBottom: '0.75rem' }}>
                           <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: '#0f172a' }}>
-                            Selected: {Object.entries(selectedVariant.combination).map(([key, value]) => `₹{key}: ₹{value}`).join(', ')}
+                            Selected: {Object.entries(selectedVariant.combination).map(([key, value]) => `${key}: ${value}`).join(', ')}
                           </h4>
                           {selectedVariant.stock === 'out_of_stock' && (
                             <div style={{ 

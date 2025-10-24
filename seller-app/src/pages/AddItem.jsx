@@ -89,7 +89,7 @@ export default function AddItem({ user }) {
   // Fetch categories from API
   const fetchCategories = async () => {
     try {
-      const response = await axios.get(`₹{import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/categories`);
+      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/categories`);
       setCategories(response.data.categories || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -101,7 +101,7 @@ export default function AddItem({ user }) {
     if (!newCategory.name.trim()) return;
     
     try {
-      const response = await axios.post(`₹{import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/categories`, newCategory);
+      const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/categories`, newCategory);
       setCategories(prev => [...prev, response.data.category]);
       setNewCategory({ name: '', description: '' });
       setShowAddCategory(false);

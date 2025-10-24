@@ -26,10 +26,10 @@ export const useCart = () => {
         return
       }
 
-      const response = await fetch(`₹{import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cart/₹{userId}`)
-      const data = await response.json()
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cart/${userId}`)
       
       if (response.ok) {
+        const data = await response.json()
         console.log('Cart data:', data.cart) // Debug log
         
         // Test: Add tax percentage to cart items for testing
@@ -74,7 +74,7 @@ export const useCart = () => {
         return
       }
 
-      const response = await fetch(`₹{import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cart/₹{userId}`)
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cart/${userId}`)
       const data = await response.json()
       
       if (response.ok) {
@@ -124,7 +124,7 @@ export const useCart = () => {
         }
       }
 
-      const response = await fetch(`₹{import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cart/add`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cart/add`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -152,7 +152,7 @@ export const useCart = () => {
       const user = getCurrentUser()
       const userId = getUserId(user)
 
-      const response = await fetch(`₹{import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cart/update`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cart/update`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -185,7 +185,7 @@ export const useCart = () => {
       const user = getCurrentUser()
       const userId = getUserId(user)
 
-      const response = await fetch(`₹{import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cart/remove`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cart/remove`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -217,7 +217,7 @@ export const useCart = () => {
       const user = getCurrentUser()
       const userId = getUserId(user)
 
-      const response = await fetch(`₹{import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cart/clear`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cart/clear`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

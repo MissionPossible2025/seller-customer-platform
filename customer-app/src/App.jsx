@@ -5,7 +5,6 @@ import ProductsPage from './pages/ProductsPage.jsx'
 import CartPage from './pages/CartPage.jsx'
 import BuyNowPage from './pages/BuyNowPage.jsx'
 import OrderSummary from './pages/OrderSummary.jsx'
-import PaymentPage from './pages/PaymentPage.jsx'
 import OrderSuccess from './pages/OrderSuccess.jsx'
 
 export default function App() {
@@ -17,7 +16,6 @@ export default function App() {
       <Route path="/cart" element={<CartPage />} />
       <Route path="/buy-now" element={<BuyNowPage />} />
       <Route path="/order-summary" element={<OrderSummary />} />
-      <Route path="/payment" element={<PaymentPage />} />
       <Route path="/order-success" element={<OrderSuccess />} />
       <Route path="*" element={<Navigate to="/auth" replace />} />
     </Routes>

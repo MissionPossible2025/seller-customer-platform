@@ -127,7 +127,7 @@ export default function PaymentPage() {
     }
 
     // Create order in backend
-    const response = await fetch(`₹{import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/orders`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/orders`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

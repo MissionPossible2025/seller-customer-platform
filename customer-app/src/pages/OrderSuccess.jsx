@@ -100,6 +100,7 @@ export default function OrderSuccess() {
               <span style={{ fontWeight: '500', textTransform: 'capitalize' }}>
                 {paymentMethod === 'netbanking' ? 'Net Banking' : 
                  paymentMethod === 'upi' ? 'UPI Payment' : 
+                 paymentMethod === 'Direct Order' ? 'Direct Order' :
                  paymentMethod?.charAt(0).toUpperCase() + paymentMethod?.slice(1)}
               </span>
             </div>

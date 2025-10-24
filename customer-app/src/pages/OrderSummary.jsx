@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { getCurrentUser, getUserId } from '../utils/userUtils'
 
 export default function OrderSummary() {
   const location = useLocation()
@@ -104,7 +105,7 @@ export default function OrderSummary() {
     })
   }
 
-  const handleProceedToPayment = () => {
+  const handlePlaceOrder = async () => {
     const u = orderData.user
     const addr = u.address || {}
     if (!u.name || !u.phone || !addr.street || !addr.city || !addr.state || !addr.pincode) {
@@ -112,8 +113,83 @@ export default function OrderSummary() {
       setTimeout(() => setMessage(''), 3000)
       return
     }
-    localStorage.setItem('currentOrder', JSON.stringify(orderData))
-    navigate('/payment', { state: { orderData } })
+    
+    try {
+      setMessage('🔄 Placing your order...')
+      
+      // Create order data
+      const orderDataToSend = {
+        customer: orderData.user.id || orderData.user._id,
+        customerDetails: {
+          name: u.name,
+          email: u.email || 'customer@example.com',
+          phone: u.phone,
+          address: addr
+        },
+        items: cartItems.map(item => ({
+          product: item.product._id,
+          quantity: item.quantity,
+          price: item.discountedPrice && item.discountedPrice < item.price ? item.discountedPrice : item.price,
+          discountedPrice: item.discountedPrice,
+          seller: item.product.seller._id || item.product.seller,
+          variant: item.variant || null
+        })),
+        totalAmount: calculateTotalWithTax(cartItems),
+        notes: 'Order placed directly - no payment required'
+      }
+      
+      // Create order via API
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/orders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(orderDataToSend)
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        setMessage('✅ Order placed successfully!')
+        
+        // Clear cart after successful order
+        try {
+          const user = getCurrentUser()
+          const userId = getUserId(user)
+          if (userId) {
+            await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cart/clear`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ userId })
+            })
+          }
+        } catch (cartError) {
+          console.warn('Failed to clear cart:', cartError)
+        }
+        
+        setTimeout(() => {
+          navigate('/order-success', { 
+            state: { 
+              orderData: {
+                orderId: result.order.orderId,
+                paymentMethod: 'Direct Order',
+                amount: calculateTotalWithTax(cartItems),
+                orderData: orderData
+              }
+            } 
+          })
+        }, 1500)
+      } else {
+        const error = await response.json()
+        setMessage(`❌ Failed to place order: ${error.error}`)
+        setTimeout(() => setMessage(''), 3000)
+      }
+    } catch (error) {
+      console.error('Order placement error:', error)
+      setMessage('❌ Failed to place order. Please try again.')
+      setTimeout(() => setMessage(''), 3000)
+    }
   }
 
 
@@ -166,8 +242,8 @@ export default function OrderSummary() {
       // Determine which API endpoint to use based on user data structure
       const isCustomerLogin = parsedUser.customer && parsedUser.customer._id
       const apiEndpoint = isCustomerLogin 
-        ? `₹{import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/customers/₹{userId}`
-        : `₹{import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/₹{userId}`
+        ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/customers/${userId}`
+        : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/${userId}`
 
       console.log('OrderSummary: Using API endpoint:', apiEndpoint)
 
@@ -801,10 +877,10 @@ export default function OrderSummary() {
             </button>
             
             <button
-              onClick={handleProceedToPayment}
+              onClick={handlePlaceOrder}
               style={{ flex: 2, padding: '1rem', borderRadius: '8px', border: 'none', background: '#059669', color: 'white', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
             >
-              Proceed to Payment
+              Place Order
             </button>
           </div>
         </div>

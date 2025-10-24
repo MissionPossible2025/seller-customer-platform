@@ -13,7 +13,7 @@ export default function CustomerManagement({ user }) {
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/customers/seller/₹{user?._id}`);
+        const response = await axios.get(`http://localhost:5000/api/customers/seller/${user?._id}`);
         setCustomers(response.data);
       } catch (error) {
         console.error('Error fetching customers:', error);
@@ -59,7 +59,7 @@ export default function CustomerManagement({ user }) {
     }
 
     try {
-      const response = await axios.put(`http://localhost:5000/api/customers/₹{editingCustomer._id}`, {
+      const response = await axios.put(`http://localhost:5000/api/customers/${editingCustomer._id}`, {
         name: editingCustomer.name,
         phone: editingCustomer.phone
       });
@@ -79,7 +79,7 @@ export default function CustomerManagement({ user }) {
     }
 
     try {
-      await axios.delete(`http://localhost:5000/api/customers/₹{customerId}`);
+      await axios.delete(`http://localhost:5000/api/customers/${customerId}`);
       setCustomers(customers.filter(c => c._id !== customerId));
       alert('Customer removed successfully!');
     } catch (error) {
