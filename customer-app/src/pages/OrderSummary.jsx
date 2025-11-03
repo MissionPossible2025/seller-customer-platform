@@ -136,21 +136,14 @@ export default function OrderSummary() {
           phone: u.phone,
           address: addr
         },
-        items: cartItems.map(item => {
-          // Get seller ID - handle both populated and non-populated seller
-          const sellerId = item.product.seller?._id || item.product.seller?.[0]?._id || item.product.seller?.[0] || item.product.seller || item.product.sellerId
-          
-          console.log('Processing item:', item.product.name, 'Seller ID:', sellerId)
-          
-          return {
-            product: item.product._id,
-            quantity: item.quantity,
-            price: item.discountedPrice && item.discountedPrice < item.price ? item.discountedPrice : item.price,
-            discountedPrice: item.discountedPrice,
-            seller: sellerId,
-            variant: item.variant || null
-          }
-        }),
+        items: cartItems.map(item => ({
+          product: item.product._id,
+          quantity: item.quantity,
+          price: item.discountedPrice && item.discountedPrice < item.price ? item.discountedPrice : item.price,
+          discountedPrice: item.discountedPrice,
+          // Do not send seller; backend derives from product
+          variant: item.variant || null
+        })),
         totalAmount: calculateTotalWithTax(cartItems),
         notes: 'Order placed directly - no payment required'
       }
@@ -178,7 +171,7 @@ export default function OrderSummary() {
           const userId = getUserId(user)
           if (userId) {
             await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cart/clear`, {
-              method: 'POST',
+              method: 'DELETE',
               headers: {
                 'Content-Type': 'application/json'
               },

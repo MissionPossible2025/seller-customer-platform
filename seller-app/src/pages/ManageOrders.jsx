@@ -207,16 +207,38 @@ export default function ManageOrders({ user }) {
                           </button>
                         </div>
                       ) : (
-                        <span style={{
-                          padding: "0.25rem 0.75rem",
-                          borderRadius: "12px",
-                          backgroundColor: getStatusColor(order.status),
-                          color: "white",
-                          fontSize: "0.8rem",
-                          fontWeight: "500"
-                        }}>
-                          {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{
+                            padding: "0.25rem 0.75rem",
+                            borderRadius: "12px",
+                            backgroundColor: getStatusColor(order.status),
+                            color: "white",
+                            fontSize: "0.8rem",
+                            fontWeight: "500"
+                          }}>
+                            {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
+                          </span>
+                          {order.status === 'accepted' && (
+                            <button
+                              onClick={() => handleStatusUpdate(order._id, 'delivered')}
+                              style={{
+                                padding: '0.25rem 0.75rem',
+                                borderRadius: '6px',
+                                fontSize: '0.8rem',
+                                fontWeight: '500',
+                                cursor: 'pointer',
+                                backgroundColor: '#059669',
+                                color: 'white',
+                                border: 'none',
+                                transition: 'all 0.3s ease'
+                              }}
+                              onMouseOver={(e) => e.target.style.backgroundColor = '#047857'}
+                              onMouseOut={(e) => e.target.style.backgroundColor = '#059669'}
+                            >
+                              Mark Delivered
+                            </button>
+                          )}
+                        </div>
                       )}
                     </td>
                     <td style={{ padding: "1rem" }}>
@@ -615,6 +637,26 @@ export default function ManageOrders({ user }) {
                 </>
               )}
 
+              {selectedOrder.status === 'accepted' && (
+                <button 
+                  onClick={() => handleStatusUpdate(selectedOrder._id, 'delivered')}
+                  style={{
+                    padding: "0.75rem 1.5rem",
+                    borderRadius: "8px",
+                    fontSize: "1rem",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    backgroundColor: "#059669",
+                    color: "white",
+                    border: "none",
+                    transition: "all 0.3s ease"
+                  }}
+                  onMouseOver={(e) => e.target.style.backgroundColor = "#047857"}
+                  onMouseOut={(e) => e.target.style.backgroundColor = "#059669"}
+                >
+                  Mark as Delivered
+                </button>
+              )}
             </div>
           </div>
         </div>

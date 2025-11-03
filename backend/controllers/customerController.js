@@ -194,7 +194,15 @@ const customerSignup = async (req, res) => {
         _id: permittedCustomer._id,
         name: permittedCustomer.name,
         phone: permittedCustomer.phone,
-        sellerId: permittedCustomer.sellerId
+        sellerId: permittedCustomer.sellerId,
+        address: permittedCustomer.address || {
+          street: '',
+          city: '',
+          state: '',
+          pincode: '',
+          country: 'India'
+        },
+        profileComplete: !!permittedCustomer.profileComplete
       }
     });
   } catch (error) {
@@ -237,7 +245,15 @@ const customerLogin = async (req, res) => {
         _id: customer._id,
         name: customer.name,
         phone: customer.phone,
-        sellerId: customer.sellerId
+        sellerId: customer.sellerId,
+        address: customer.address || {
+          street: '',
+          city: '',
+          state: '',
+          pincode: '',
+          country: 'India'
+        },
+        profileComplete: !!customer.profileComplete
       }
     });
   } catch (error) {

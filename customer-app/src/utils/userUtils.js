@@ -66,7 +66,9 @@ export const isProfileComplete = (userData) => {
   if (!userData) return false
   
   const user = getUserObject(userData)
-  
+  // Trust persisted backend-computed flag if present
+  if (user && user.profileComplete === true) return true
+
   return user.name && user.phone && 
     user.address?.street && user.address?.city && 
     user.address?.state && user.address?.pincode

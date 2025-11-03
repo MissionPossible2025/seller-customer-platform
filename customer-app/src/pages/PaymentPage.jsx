@@ -109,8 +109,8 @@ export default function PaymentPage() {
       product: item.product._id,
       quantity: item.quantity,
       price: item.price,
-      discountedPrice: item.discountedPrice,
-      seller: item.product.seller
+      discountedPrice: item.discountedPrice
+      // Do not send seller; backend derives it from product
     }))
 
     const orderPayload = {

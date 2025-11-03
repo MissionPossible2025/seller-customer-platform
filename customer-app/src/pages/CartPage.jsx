@@ -273,14 +273,14 @@ export default function CartPage() {
                 </div>
 
                 {cartItems.map((item) => {
-                  const product = item.product
+                  const product = item.product || {}
                   const displayPrice = item.discountedPrice && item.discountedPrice < item.price 
                     ? item.discountedPrice 
                     : item.price
                   const itemTotal = displayPrice * item.quantity
 
                   return (
-                    <div key={item.product._id} style={{
+                    <div key={(product && product._id) || item._id} style={{
                       display: 'flex',
                       gap: '1rem',
                       padding: '1rem',
@@ -290,10 +290,10 @@ export default function CartPage() {
                       alignItems: 'center'
                     }}>
                       {/* Product Image */}
-                      {product.photo && (
+                      {product && product.photo && (
                         <img 
                           src={product.photo} 
-                          alt={product.name}
+                          alt={product.name || 'Product'}
                           style={{
                             width: '80px',
                             height: '80px',
@@ -306,15 +306,15 @@ export default function CartPage() {
                       {/* Product Details */}
                       <div style={{ flex: 1 }}>
                         <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', color: '#0f172a' }}>
-                          {product.name}
-                          {product.unit && (
+                          {product?.name || 'Product'}
+                          {product && product.unit && (
                             <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 'normal', marginLeft: '0.25rem' }}>
                               ({product.unit})
                             </span>
                           )}
                         </h3>
                         <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#64748b' }}>
-                          {product.description}
+                          {product?.description || ''}
                         </p>
                         
                         {/* Show variant information if available */}
@@ -329,12 +329,16 @@ export default function CartPage() {
                             borderRadius: '4px',
                             display: 'inline-block'
                           }}>
-                            {Object.entries(item.variant.combination).map(([key, value]) => `${key}: ${value}`).join(', ')}
+                            {Array.isArray(item.variant.combination)
+                              ? item.variant.combination.join(', ')
+                              : (item.variant.combination instanceof Map
+                                  ? Array.from(item.variant.combination.entries()).map(([key, value]) => `${key}: ${value}`).join(', ')
+                                  : Object.entries(item.variant.combination).map(([key, value]) => `${key}: ${value}`).join(', '))}
                           </div>
                         )}
                         
                         <div style={{ fontSize: '0.9rem', color: '#64748b' }}>
-                          Product ID: {product.productId}
+                          Product ID: {product?.productId || '—'}
                         </div>
                       </div>
 
@@ -359,7 +363,7 @@ export default function CartPage() {
                         {/* Quantity Controls */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                           <button 
-                            onClick={() => updateQuantity(product._id, item.quantity - 1)}
+                            onClick={() => updateQuantity(product?._id, item.quantity - 1)}
                             disabled={item.quantity <= 1}
                             style={{
                               width: '30px',
@@ -380,7 +384,7 @@ export default function CartPage() {
                             value={item.quantity}
                             onChange={(e) => {
                               const value = parseInt(e.target.value) || 1
-                              updateQuantity(product._id, Math.max(1, value))
+                              updateQuantity(product?._id, Math.max(1, value))
                             }}
                             min="1"
                             style={{
@@ -396,7 +400,7 @@ export default function CartPage() {
                             }}
                           />
                           <button 
-                            onClick={() => updateQuantity(product._id, item.quantity + 1)}
+                            onClick={() => updateQuantity(product?._id, item.quantity + 1)}
                             style={{
                               width: '30px',
                               height: '30px',
@@ -420,7 +424,7 @@ export default function CartPage() {
 
                       {/* Remove Button */}
                       <button 
-                        onClick={() => removeItem(product._id)}
+                        onClick={() => product?._id && removeItem(product._id)}
                         style={{
                           padding: '0.5rem',
                           borderRadius: '4px',

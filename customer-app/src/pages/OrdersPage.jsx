@@ -120,7 +120,6 @@ export default function OrdersPage() {
               style={{
                 padding: '0.5rem 1rem',
                 borderRadius: '8px',
-                border: 'none',
                 background: activeFilter === 'all' ? '#059669' : 'white',
                 color: activeFilter === 'all' ? 'white' : '#64748b',
                 fontSize: '0.875rem',
@@ -137,7 +136,6 @@ export default function OrdersPage() {
               style={{
                 padding: '0.5rem 1rem',
                 borderRadius: '8px',
-                border: 'none',
                 background: activeFilter === 'pending' ? '#f59e0b' : 'white',
                 color: activeFilter === 'pending' ? 'white' : '#64748b',
                 fontSize: '0.875rem',
@@ -154,7 +152,6 @@ export default function OrdersPage() {
               style={{
                 padding: '0.5rem 1rem',
                 borderRadius: '8px',
-                border: 'none',
                 background: activeFilter === 'accepted' ? '#22c55e' : 'white',
                 color: activeFilter === 'accepted' ? 'white' : '#64748b',
                 fontSize: '0.875rem',
@@ -171,7 +168,6 @@ export default function OrdersPage() {
               style={{
                 padding: '0.5rem 1rem',
                 borderRadius: '8px',
-                border: 'none',
                 background: activeFilter === 'cancelled' ? '#ef4444' : 'white',
                 color: activeFilter === 'cancelled' ? 'white' : '#64748b',
                 fontSize: '0.875rem',
