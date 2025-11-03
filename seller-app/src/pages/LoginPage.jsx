@@ -7,7 +7,8 @@ export default function LoginPage({ setLoggedIn }) {
 
   const handleLogin = async () => {
     try {
-      const res = await axios.post("http://localhost:5000/api/users/login", { email, password });
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const res = await axios.post(`${baseUrl}/api/users/login`, { email, password });
       
       // Save token (optional)
       localStorage.setItem("token", res.data.token);

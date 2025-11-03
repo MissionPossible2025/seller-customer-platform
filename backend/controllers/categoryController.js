@@ -1,5 +1,6 @@
 // controllers/categoryController.js
 import Category from '../models/categoryModel.js';
+import Product from '../models/productModel.js';
 
 // Get all active categories
 export const getCategories = async (req, res) => {
@@ -105,17 +106,29 @@ export const updateCategory = async (req, res) => {
 export const deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
+    const { cascade } = req.query;
 
     const category = await Category.findById(id);
     if (!category) {
       return res.status(404).json({ error: 'Category not found' });
     }
 
-    // Soft delete - set isActive to false
+    // If cascade deletion requested, remove all products under this category and delete the category
+    if (String(cascade).toLowerCase() === 'true') {
+      // Products use category name as the link
+      await Product.deleteMany({ category: category.name });
+      await Category.deleteOne({ _id: id });
+      return res.json({ message: 'Category and its products deleted successfully', cascade: true });
+    }
+
+    // Default: soft delete category only
     category.isActive = false;
     await category.save();
 
-    res.json({ message: 'Category deleted successfully' });
+    // Optionally soft delete products too when not doing hard delete
+    // await Product.updateMany({ category: category.name }, { isActive: false });
+
+    res.json({ message: 'Category deleted successfully', cascade: false });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -1,6 +1,6 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import mongoose from 'mongoose';
+import connectDB from './config/db.js';
 import cors from 'cors';
 import userRoutes from './routes/userRoutes.js';
 import productRoutes from './routes/productRoutes.js';
@@ -30,11 +30,7 @@ app.use("/api/customers", customerRoutes);
 app.use("/api/categories", categoryRoutes);
 
 // MongoDB connection
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/seller-customer-platform';
-
-mongoose.connect(MONGO_URI)
-  .then(() => console.log('MongoDB connected successfully'))
-  .catch(err => console.error('MongoDB connection error:', err));
+await connectDB();
 
 app.get('/', (req, res) => res.send('Server is running'));
 

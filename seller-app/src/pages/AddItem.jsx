@@ -89,6 +89,12 @@ export default function AddItem({ user }) {
     }
   };
 
+  // Resolve a template for the currently selected category, fallback to "Others"
+  const getCurrentTemplate = () => {
+    if (!selectedCategory) return null;
+    return productTemplates[selectedCategory] || productTemplates.Others;
+  };
+
   // Fetch categories from API
   const fetchCategories = async () => {
     try {
@@ -96,6 +102,30 @@ export default function AddItem({ user }) {
       setCategories(response.data.categories || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
+    }
+  };
+
+  // Delete category (with cascade to delete all products under it)
+  const handleDeleteCategory = async (category) => {
+    try {
+      const catId = category._id || category.id;
+      if (!catId) {
+        alert('Category ID not found');
+        return;
+      }
+
+      if (!confirm(`Delete category "${category.name || category}" and ALL its products?`)) return;
+
+      await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/categories/${catId}?cascade=true`);
+      await fetchCategories();
+      // Optionally, if currently selected category got deleted, reset selection
+      if (selectedCategory === (category.name || category)) {
+        setSelectedCategory(null);
+      }
+      alert('Category and its products deleted.');
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      alert('Failed to delete category: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -491,31 +521,61 @@ export default function AddItem({ user }) {
               marginBottom: "2rem"
             }}>
         {categories.map((cat) => (
-                <div
-            key={cat.name || cat}
+          <div
+            key={cat._id || cat.name || cat}
             style={{
-                    padding: "1.5rem",
-                    border: "2px solid #ccc",
-                    borderRadius: "8px",
+              position: "relative",
+              padding: "1.5rem",
+              border: "2px solid #ccc",
+              borderRadius: "8px",
               cursor: "pointer",
-                    background: "transparent",
-                    transition: "all 0.3s ease",
-                    fontWeight: "500",
-                    fontSize: "1.1rem"
-                  }}
-                  onClick={() => handleCategorySelect(cat.name || cat)}
-                  onMouseOver={(e) => {
-                    e.target.style.backgroundColor = "#646cff";
-                    e.target.style.color = "white";
-                  }}
-                  onMouseOut={(e) => {
-                    e.target.style.backgroundColor = "transparent";
-                    e.target.style.color = "inherit";
-                  }}
+              background: "transparent",
+              transition: "all 0.3s ease",
+              fontWeight: "500",
+              fontSize: "1.1rem"
+            }}
+            onClick={() => handleCategorySelect(cat.name || cat)}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = "#646cff";
+              e.currentTarget.style.color = "white";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.color = "inherit";
+            }}
           >
+            {/* Category Name */}
             {cat.name || cat}
-                </div>
-              ))}
+
+            {/* Delete Category Button */}
+            {cat._id && (
+              <button
+                type="button"
+                title="Delete category"
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  handleDeleteCategory(cat);
+                }}
+                style={{
+                  position: "absolute",
+                  top: "8px",
+                  right: "8px",
+                  padding: "0.35rem 0.6rem",
+                  borderRadius: "6px",
+                  border: "1px solid #dc2626",
+                  background: "#dc2626",
+                  color: "white",
+                  cursor: "pointer",
+                  fontSize: "0.85rem"
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#b91c1c")}
+                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#dc2626")}
+              >
+                Delete
+              </button>
+            )}
+          </div>
+        ))}
               
               {/* Add Category Button */}
               <div
@@ -647,7 +707,7 @@ export default function AddItem({ user }) {
             <div style={{ marginBottom: "2rem" }}>
               <h3 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>{selectedCategory} Product</h3>
               <p style={{ color: "#888", fontSize: "1rem", marginBottom: "1rem" }}>
-                {productTemplates[selectedCategory].description}
+                {getCurrentTemplate()?.description}
               </p>
             </div>
 
@@ -736,7 +796,7 @@ export default function AddItem({ user }) {
                   name="description"
                   value={productData.description}
                   onChange={handleChange}
-                  placeholder={productTemplates[selectedCategory].placeholder}
+                  placeholder={getCurrentTemplate()?.placeholder}
                   style={{
                     width: "100%",
                     padding: "0.75rem",
