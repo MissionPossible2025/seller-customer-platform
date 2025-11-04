@@ -111,7 +111,10 @@ export default function ManageOrders({ user }) {
   };
 
   const removeItem = (index) => {
-    setEditItems(prev => prev.map((it, i) => i === index ? { ...it, quantity: 0 } : it));
+    // Remove from editItems immediately
+    setEditItems(prev => prev.filter((_, i) => i !== index));
+    // Also remove from the visible selectedOrder items so UI updates instantly
+    setSelectedOrder(prev => prev ? { ...prev, items: (prev.items || []).filter((_, i) => i !== index) } : prev);
   };
 
   const saveEditedItems = async () => {
@@ -783,6 +786,41 @@ export default function ManageOrders({ user }) {
                 ))}
               </div>
             </div>
+
+            {/* Returned Items (if any) */}
+            {Array.isArray(selectedOrder.returnedItems) && selectedOrder.returnedItems.length > 0 && (
+              <div style={{ marginBottom: "2rem" }}>
+                <h3 style={{ margin: "0 0 1rem 0", color: "#0f172a", fontSize: "1.2rem" }}>Returned Items</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  {selectedOrder.returnedItems.map((item, idx) => (
+                    <div key={idx} style={{
+                      padding: "1rem",
+                      border: "1px dashed #ef4444",
+                      borderRadius: "12px",
+                      background: "#fff1f2"
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ fontWeight: 600, color: '#991b1b' }}>{item.product?.name || 'Product'}</div>
+                        <span style={{ color: '#b91c1c', fontWeight: 600 }}>Returned</span>
+                      </div>
+                      <div style={{ color: '#7f1d1d', marginTop: '0.25rem' }}>Qty returned: {item.quantity}</div>
+                      {item.variant?.combination && (
+                        <div style={{ color: '#7f1d1d', marginTop: '0.25rem' }}>
+                          {Object.entries(item.variant.combination).map(([k, v]) => (
+                            <span key={k} style={{ marginRight: '0.5rem' }}>{k}: {v}</span>
+                          ))}
+                        </div>
+                      )}
+                      {item.returnedAt && (
+                        <div style={{ color: '#991b1b', marginTop: '0.25rem', fontSize: '0.9rem' }}>
+                          {new Date(item.returnedAt).toLocaleString()}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Order Summary with tax */}
             <div style={{ marginBottom: "2rem" }}>

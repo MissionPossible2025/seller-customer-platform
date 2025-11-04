@@ -9,6 +9,7 @@ export default function EditItem() {
   const navigate = useNavigate();
   const [item, setItem] = useState({
     name: "",
+    brand: "",
     unit: "piece",
     description: "",
     stockStatus: "in_stock",
@@ -252,6 +253,9 @@ export default function EditItem() {
       // Add basic product fields
       formData.append('productId', item.productId);
       formData.append('name', item.name);
+      if (item.brand !== undefined) {
+        formData.append('brand', item.brand);
+      }
       formData.append('unit', item.unit || 'piece');
       formData.append('description', item.description);
       formData.append('category', item.category);
@@ -448,12 +452,13 @@ export default function EditItem() {
             />
           </div>
 
-          {/* Unit */}
+          {/* Brand */}
           <div>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>Unit:</label>
-            <select
-              name="unit"
-              value={item.unit}
+            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>Brand:</label>
+            <input 
+              type="text" 
+              name="brand" 
+              value={item.brand}
               onChange={handleChange}
               style={{
                 width: "100%",
@@ -462,18 +467,27 @@ export default function EditItem() {
                 border: "1px solid #ccc",
                 fontSize: "1rem"
               }}
-            >
-              <option value="piece">Piece</option>
-              <option value="kg">Kilogram (kg)</option>
-              <option value="gram">Gram (g)</option>
-              <option value="liter">Liter (L)</option>
-              <option value="ml">Milliliter (ml)</option>
-              <option value="box">Box</option>
-              <option value="pack">Pack</option>
-              <option value="set">Set</option>
-              <option value="pair">Pair</option>
-              <option value="dozen">Dozen</option>
-            </select>
+              placeholder="Enter brand (optional)"
+            />
+          </div>
+
+          {/* Unit */}
+          <div>
+            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>Unit:</label>
+            <input
+              type="text"
+              name="unit"
+              value={item.unit}
+              onChange={handleChange}
+              placeholder="Enter unit (e.g., piece, kg, pack)"
+              style={{
+                width: "100%",
+                padding: "0.75rem",
+                borderRadius: "6px",
+                border: "1px solid #ccc",
+                fontSize: "1rem"
+              }}
+            />
           </div>
 
           {/* Description */}

@@ -327,6 +327,11 @@ export default function BuyNowPage() {
                 <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.125rem', color: '#0f172a' }}>
                   {product.name}
                 </h3>
+                {product.brand && (
+                  <div style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', color: '#111827', fontWeight: 600 }}>
+                    {product.brand}
+                  </div>
+                )}
                 <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', color: '#64748b' }}>
                   {product.description}
                 </p>

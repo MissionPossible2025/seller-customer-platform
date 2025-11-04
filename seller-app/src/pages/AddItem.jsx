@@ -9,6 +9,7 @@ export default function AddItem({ user }) {
   const [productData, setProductData] = useState({
     productId: "",
     name: "",
+    brand: "",
     unit: "piece",
     description: "",
     stockStatus: "in_stock",
@@ -417,6 +418,9 @@ export default function AddItem({ user }) {
       const formData = new FormData();
       formData.append('productId', productToSave.productId);
       formData.append('name', productToSave.name);
+      if (productToSave.brand !== undefined) {
+        formData.append('brand', productToSave.brand);
+      }
       formData.append('unit', productToSave.unit || 'piece');
       formData.append('description', productToSave.description);
       formData.append('category', productToSave.category);
@@ -467,6 +471,7 @@ export default function AddItem({ user }) {
     setProductData({
       productId: "",
       name: "",
+      brand: "",
       unit: "piece",
       description: "",
       stockStatus: "in_stock",
@@ -761,12 +766,14 @@ export default function AddItem({ user }) {
 
               <div>
                 <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-                  Unit *
+                  Brand
                 </label>
-                <select
-                  name="unit"
-                  value={productData.unit}
+                <input
+                  type="text"
+                  name="brand"
+                  value={productData.brand}
                   onChange={handleChange}
+                  placeholder="Enter brand (optional)"
                   style={{
                     width: "100%",
                     padding: "0.75rem",
@@ -774,18 +781,27 @@ export default function AddItem({ user }) {
                     border: "1px solid #ccc",
                     fontSize: "1rem"
                   }}
-                >
-                  <option value="piece">Piece</option>
-                  <option value="kg">Kilogram (kg)</option>
-                  <option value="gram">Gram (g)</option>
-                  <option value="liter">Liter (L)</option>
-                  <option value="ml">Milliliter (ml)</option>
-                  <option value="box">Box</option>
-                  <option value="pack">Pack</option>
-                  <option value="set">Set</option>
-                  <option value="pair">Pair</option>
-                  <option value="dozen">Dozen</option>
-                </select>
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
+                  Unit *
+                </label>
+                <input
+                  type="text"
+                  name="unit"
+                  value={productData.unit}
+                  onChange={handleChange}
+                  placeholder="Enter unit (e.g., piece, kg, pack)"
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem",
+                    borderRadius: "6px",
+                    border: "1px solid #ccc",
+                    fontSize: "1rem"
+                  }}
+                />
               </div>
 
               <div>

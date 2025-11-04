@@ -357,8 +357,9 @@ export const updateOrderItems = async (req, res) => {
       return res.status(400).json({ error: 'No valid items provided' });
     }
 
-    // Build updated items array from existing order items
+    // Build updated items array from existing order items and collect removed ones
     const updatedItems = [];
+    const removedItems = [];
     
     for (const existingItem of order.items) {
       const productId = (existingItem.product?._id || existingItem.product).toString();
@@ -367,31 +368,48 @@ export const updateOrderItems = async (req, res) => {
       
       if (requestedMap.has(key)) {
         const requested = requestedMap.get(key);
-        if (requested.quantity > 0) {
-          // Create new item object with only plain values (no Mongoose refs)
-          updatedItems.push({
+
+        // If quantity reduced, record the difference as returned
+        const existingQty = Number(existingItem.quantity || 0);
+        const newQty = Number(requested.quantity || 0);
+        const deltaReturned = Math.max(0, existingQty - newQty);
+        if (deltaReturned > 0) {
+          removedItems.push({
             product: productId,
-            quantity: requested.quantity,
+            quantity: deltaReturned,
             price: existingItem.price || 0,
             discountedPrice: existingItem.discountedPrice || null,
             seller: existingItem.seller ? (existingItem.seller._id || existingItem.seller).toString() : null,
-            variant: requested.variant || null
+            variant: requested.variant || getPlainVariant(existingItem.variant || null),
+            returnedAt: new Date()
           });
         }
+
+        if (newQty > 0) {
+          // Keep the remaining quantity
+          updatedItems.push({
+            product: productId,
+            quantity: newQty,
+            price: existingItem.price || 0,
+            discountedPrice: existingItem.discountedPrice || null,
+            seller: existingItem.seller ? (existingItem.seller._id || existingItem.seller).toString() : null,
+            variant: requested.variant || getPlainVariant(existingItem.variant || null)
+          });
+        }
+
         // Remove from map to track what was processed
         requestedMap.delete(key);
       } else {
-        // Item not in request, keep it as is (shouldn't happen in normal flow, but handle it)
-        if (existingItem.quantity > 0) {
-          updatedItems.push({
-            product: productId,
-            quantity: existingItem.quantity,
-            price: existingItem.price || 0,
-            discountedPrice: existingItem.discountedPrice || null,
-            seller: existingItem.seller ? (existingItem.seller._id || existingItem.seller).toString() : null,
-            variant: getPlainVariant(existingItem.variant || null)
-          });
-        }
+        // Item was omitted from the request entirely => treat as returned/removed
+        removedItems.push({
+          product: productId,
+          quantity: existingItem.quantity || 0,
+          price: existingItem.price || 0,
+          discountedPrice: existingItem.discountedPrice || null,
+          seller: existingItem.seller ? (existingItem.seller._id || existingItem.seller).toString() : null,
+          variant: getPlainVariant(existingItem.variant || null),
+          returnedAt: new Date()
+        });
       }
     }
 
@@ -410,6 +428,14 @@ export const updateOrderItems = async (req, res) => {
 
     // Update order items
     orderDoc.items = updatedItems;
+
+    // Append removed items to returnedItems log
+    if (!Array.isArray(orderDoc.returnedItems)) {
+      orderDoc.returnedItems = [];
+    }
+    if (removedItems.length > 0) {
+      orderDoc.returnedItems.push(...removedItems);
+    }
 
     // Recalculate totalAmount including tax for all items
     let subtotal = 0;
@@ -446,6 +472,8 @@ export const updateOrderItems = async (req, res) => {
       .populate('customer', 'name email phone')
       .populate('items.product', 'name description photo category taxPercentage')
       .populate('items.seller', 'name email')
+      .populate('returnedItems.product', 'name description photo category taxPercentage')
+      .populate('returnedItems.seller', 'name email')
       .lean();
 
     if (!updatedOrder) {

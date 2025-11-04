@@ -93,6 +93,50 @@ const orderSchema = new mongoose.Schema({
       }
     }
   }],
+  // Track items that were returned/removed after order creation
+  returnedItems: [{
+    product: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Product',
+      required: true
+    },
+    quantity: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    price: {
+      type: Number
+    },
+    discountedPrice: {
+      type: Number
+    },
+    seller: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    variant: {
+      combination: {
+        type: Map,
+        of: String
+      },
+      price: {
+        type: Number
+      },
+      originalPrice: {
+        type: Number
+      },
+      stock: {
+        type: String,
+        enum: ['in_stock', 'out_of_stock'],
+        default: 'in_stock'
+      }
+    },
+    returnedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   totalAmount: {
     type: Number,
     required: true

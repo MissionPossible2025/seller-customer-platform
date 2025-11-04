@@ -7,6 +7,7 @@ export const createProduct = async (req, res) => {
     const { 
       productId, 
       name,
+      brand,
       unit,
       description, 
       category, 
@@ -132,6 +133,7 @@ export const createProduct = async (req, res) => {
     const productData = {
       productId: productId.toUpperCase(),
       name,
+      brand: brand || '',
       unit: unit || 'piece',
       description,
       category,
@@ -336,6 +338,7 @@ export const updateProduct = async (req, res) => {
 
     const updateData = {};
     if (name !== undefined) updateData.name = name;
+    if (req.body.brand !== undefined) updateData.brand = req.body.brand;
     if (unit !== undefined) updateData.unit = unit;
     if (description !== undefined) updateData.description = description;
     if (category !== undefined) updateData.category = category;
