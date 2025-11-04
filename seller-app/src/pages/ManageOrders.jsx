@@ -8,6 +8,7 @@ export default function ManageOrders({ user }) {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editItems, setEditItems] = useState([]);
+  const [isReturnedMode, setIsReturnedMode] = useState(false); // Track if opened via Returned button
   const [message, setMessage] = useState('');
   const [trackingNumber, setTrackingNumber] = useState('');
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 640 : false);
@@ -82,9 +83,21 @@ export default function ManageOrders({ user }) {
     }
   };
 
-  const openReturnEdit = (order) => {
+  const openEditMode = (order) => {
     setSelectedOrder(order);
     setIsEditMode(true);
+    setIsReturnedMode(false);
+    setEditItems((order.items || []).map(it => ({
+      product: it.product?._id || it.product,
+      quantity: it.quantity,
+      variant: it.variant || null
+    })));
+  };
+
+  const openReturnEdit = (order) => {
+    setSelectedOrder(order);
+    setIsReturnedMode(true); // Mark as opened via Returned button
+    setIsEditMode(false); // Don't enable edit mode yet
     setEditItems((order.items || []).map(it => ({
       product: it.product?._id || it.product,
       quantity: it.quantity,
@@ -103,21 +116,58 @@ export default function ManageOrders({ user }) {
 
   const saveEditedItems = async () => {
     try {
-      await axios.put(`http://localhost:5000/api/orders/${selectedOrder._id}/items`, {
-        items: editItems
+      // Filter out items with quantity 0 before sending
+      const itemsToSave = editItems.filter(it => it.quantity > 0);
+      
+      if (itemsToSave.length === 0) {
+        setMessage('Order must have at least one item');
+        setTimeout(() => setMessage(''), 3000);
+        return;
+      }
+
+      const response = await axios.put(`http://localhost:5000/api/orders/${selectedOrder._id}/items`, {
+        items: itemsToSave
       });
-      const refreshed = await axios.get(`http://localhost:5000/api/orders/${selectedOrder._id}`);
-      const updatedOrder = refreshed.data?.order || refreshed.data;
-      // Update orders list and selected
-      setOrders(prev => prev.map(o => o._id === updatedOrder._id ? { ...updatedOrder } : o));
-      setSelectedOrder(updatedOrder);
+      
+      // Get updated order from response
+      const updatedOrder = response.data?.order;
+      
+      if (!updatedOrder) {
+        throw new Error('No order data in response');
+      }
+      
+      // Update orders list and selected order with the updated data
+      setOrders(prev => prev.map(o => {
+        if (o._id === updatedOrder._id) {
+          // Also filter items to show only items from this seller
+          return {
+            ...updatedOrder,
+            items: updatedOrder.items?.filter(item => 
+              item.seller?._id === user._id || item.seller?.toString() === user._id.toString()
+            ) || []
+          };
+        }
+        return o;
+      }));
+      
+      // Update selected order with filtered items (only this seller's items)
+      const filteredOrder = {
+        ...updatedOrder,
+        items: updatedOrder.items?.filter(item => 
+          item.seller?._id === user._id || item.seller?.toString() === user._id.toString()
+        ) || []
+      };
+      setSelectedOrder(filteredOrder);
+      
       setIsEditMode(false);
-      setMessage('Order updated for returns');
+      setIsReturnedMode(false);
+      setMessage('Order updated successfully');
       setTimeout(() => setMessage(''), 2500);
     } catch (e) {
       console.error('Failed to save edited items', e);
-      setMessage('Failed to update order');
-      setTimeout(() => setMessage(''), 2500);
+      const errorMessage = e.response?.data?.error || e.message || 'Failed to update order';
+      setMessage(`Error: ${errorMessage}`);
+      setTimeout(() => setMessage(''), 4000);
     }
   };
 
@@ -199,16 +249,24 @@ export default function ManageOrders({ user }) {
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                       <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>#{order.orderId}</div>
-                      <span style={{
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '9999px',
-                        backgroundColor: getStatusColor(order.status),
-                        color: 'white',
-                        fontSize: '0.7rem',
-                        fontWeight: 600
-                      }}>
-                        {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
-                      </span>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <span style={{
+                          padding: '0.15rem 0.5rem',
+                          borderRadius: '9999px',
+                          backgroundColor: getStatusColor(order.status),
+                          color: 'white',
+                          fontSize: '0.7rem',
+                          fontWeight: 600
+                        }}>
+                          {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
+                        </span>
+                        {order.status === 'delivered' && (
+                          <button
+                            onClick={() => openReturnEdit(order)}
+                            style={{ padding: '0.35rem 0.65rem', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#ffffff', color: '#111827', fontWeight: 600, fontSize: '0.7rem' }}
+                          >Returned</button>
+                        )}
+                      </div>
                     </div>
                     <div style={{ color: '#d1d5db', fontSize: '0.85rem', marginBottom: '0.25rem' }}>{order.customerDetails?.name}</div>
                     <div style={{ color: '#9ca3af', fontSize: '0.8rem', marginBottom: '0.5rem' }}>{order.items?.length} item(s) • ₹{order.totalAmount?.toFixed(2)}</div>
@@ -232,16 +290,13 @@ export default function ManageOrders({ user }) {
                               style={{ padding: '0.6rem', borderRadius: '8px', border: 'none', background: '#059669', color: 'white', fontWeight: 600, width: '100%' }}
                             >Mark Delivered</button>
                           )}
-                          {order.status === 'delivered' && (
-                            <button
-                              onClick={() => openReturnEdit(order)}
-                              style={{ padding: '0.6rem', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#ffffff', color: '#111827', fontWeight: 600, width: '100%' }}
-                            >Returned</button>
-                          )}
                         </>
                       )}
                       <button
-                        onClick={() => setSelectedOrder(order)}
+                        onClick={() => {
+                          setSelectedOrder(order);
+                          setIsReturnedMode(false);
+                        }}
                         style={{ padding: '0.6rem', borderRadius: '8px', border: '1px solid #646cff', background: 'transparent', color: 'white', fontWeight: 600 }}
                       >View Details</button>
                     </div>
@@ -324,7 +379,7 @@ export default function ManageOrders({ user }) {
                               </button>
                             </div>
                           ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                               <span style={{
                                 padding: '0.25rem 0.75rem',
                                 borderRadius: '12px',
@@ -355,12 +410,33 @@ export default function ManageOrders({ user }) {
                                   Mark Delivered
                                 </button>
                               )}
+                              {order.status === 'delivered' && (
+                                <button 
+                                  onClick={() => openReturnEdit(order)}
+                                  style={{
+                                    padding: '0.25rem 0.75rem',
+                                    borderRadius: '6px',
+                                    fontSize: '0.8rem',
+                                    fontWeight: '500',
+                                    cursor: 'pointer',
+                                    backgroundColor: '#ffffff',
+                                    color: '#111827',
+                                    border: '1px solid #e2e8f0',
+                                    transition: 'all 0.3s ease'
+                                  }}
+                                >
+                                  Returned
+                                </button>
+                              )}
                             </div>
                           )}
                         </td>
                         <td style={{ padding: '1rem' }}>
                           <button 
-                            onClick={() => setSelectedOrder(order)}
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              setIsReturnedMode(false);
+                            }}
                             style={{
                               padding: '0.5rem 1rem',
                               borderRadius: '6px',
@@ -377,24 +453,6 @@ export default function ManageOrders({ user }) {
                           >
                             View Details
                           </button>
-                          {order.status === 'delivered' && (
-                            <button 
-                              onClick={() => openReturnEdit(order)}
-                              style={{
-                                padding: '0.5rem 1rem',
-                                borderRadius: '6px',
-                                fontSize: '0.8rem',
-                                fontWeight: '500',
-                                cursor: 'pointer',
-                                backgroundColor: '#ffffff',
-                                color: '#111827',
-                                border: '1px solid #e2e8f0',
-                                marginLeft: '0.5rem'
-                              }}
-                            >
-                              Returned
-                            </button>
-                          )}
                         </td>
                       </tr>
                     ))}
@@ -424,6 +482,8 @@ export default function ManageOrders({ user }) {
         onClick={() => {
           setSelectedOrder(null);
           setTrackingNumber('');
+          setIsReturnedMode(false);
+          setIsEditMode(false);
         }}
         >
           <div style={{
@@ -439,32 +499,111 @@ export default function ManageOrders({ user }) {
           }}
           onClick={(e) => e.stopPropagation()}
           >
-            {/* Close Button */}
-            <button 
-              onClick={() => {
-                setSelectedOrder(null);
-                setTrackingNumber('');
-              }}
-              style={{
-                position: "absolute",
-                top: "1rem",
-                right: "1rem",
-                background: "#ef4444",
-                color: "white",
-                border: "none",
-                borderRadius: "50%",
-                width: "40px",
-                height: "40px",
-                cursor: "pointer",
-                fontSize: "1.2rem",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
-              }}
-            >
-              ×
-            </button>
+            {/* Top Right Action Buttons (Edit, Save, Cancel) */}
+            <div style={{
+              position: "absolute",
+              top: "1rem",
+              right: "1rem",
+              display: "flex",
+              gap: "0.5rem",
+              alignItems: "center"
+            }}>
+              {/* Show Edit button only when order was opened via Returned button */}
+              {!isEditMode && isReturnedMode && selectedOrder.status === 'delivered' && (
+                <button 
+                  onClick={() => setIsEditMode(true)}
+                  style={{
+                    padding: "0.5rem 1rem",
+                    borderRadius: "8px",
+                    fontSize: "0.9rem",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    backgroundColor: "#646cff",
+                    color: "white",
+                    border: "none",
+                    transition: "all 0.3s ease",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+                  }}
+                  onMouseOver={(e) => e.target.style.backgroundColor = "#535bf2"}
+                  onMouseOut={(e) => e.target.style.backgroundColor = "#646cff"}
+                >
+                  Edit
+                </button>
+              )}
+
+              {isEditMode && (
+                <>
+                  <button 
+                    onClick={saveEditedItems}
+                    style={{
+                      padding: "0.5rem 1rem",
+                      borderRadius: "8px",
+                      fontSize: "0.9rem",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      backgroundColor: "#3b82f6",
+                      color: "white",
+                      border: "none",
+                      transition: "all 0.3s ease",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+                    }}
+                    onMouseOver={(e) => e.target.style.backgroundColor = "#2563eb"}
+                    onMouseOut={(e) => e.target.style.backgroundColor = "#3b82f6"}
+                  >
+                    Save
+                  </button>
+                  <button 
+                    onClick={() => { 
+                      setIsEditMode(false); 
+                      setEditItems([]);
+                      setIsReturnedMode(false);
+                    }}
+                    style={{
+                      padding: "0.5rem 1rem",
+                      borderRadius: "8px",
+                      fontSize: "0.9rem",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      backgroundColor: "#6b7280",
+                      color: "white",
+                      border: "none",
+                      transition: "all 0.3s ease",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+                    }}
+                    onMouseOver={(e) => e.target.style.backgroundColor = "#4b5563"}
+                    onMouseOut={(e) => e.target.style.backgroundColor = "#6b7280"}
+                  >
+                    Cancel
+                  </button>
+                </>
+              )}
+
+              {/* Close Button */}
+              <button 
+                onClick={() => {
+                  setSelectedOrder(null);
+                  setTrackingNumber('');
+                  setIsReturnedMode(false);
+                  setIsEditMode(false);
+                }}
+                style={{
+                  background: "#ef4444",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "50%",
+                  width: "40px",
+                  height: "40px",
+                  cursor: "pointer",
+                  fontSize: "1.2rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+                }}
+              >
+                ×
+              </button>
+            </div>
 
             {/* Order Details */}
             <h2 style={{ margin: "0 0 1.5rem 0", color: "#0f172a", fontSize: "1.5rem" }}>
@@ -792,60 +931,6 @@ export default function ManageOrders({ user }) {
                 >
                   Mark as Delivered
                 </button>
-              )}
-
-              {!isEditMode && selectedOrder.status === 'delivered' && (
-                <button 
-                  onClick={() => openReturnEdit(selectedOrder)}
-                  style={{
-                    padding: "0.75rem 1.5rem",
-                    borderRadius: "8px",
-                    fontSize: "1rem",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    backgroundColor: "#ffffff",
-                    color: "#111827",
-                    border: "1px solid #e2e8f0",
-                    transition: "all 0.3s ease"
-                  }}
-                >
-                  Returned
-                </button>
-              )}
-
-              {isEditMode && (
-                <>
-                  <button 
-                    onClick={saveEditedItems}
-                    style={{
-                      padding: "0.75rem 1.5rem",
-                      borderRadius: "8px",
-                      fontSize: "1rem",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      backgroundColor: "#3b82f6",
-                      color: "white",
-                      border: "none"
-                    }}
-                  >
-                    Save Changes
-                  </button>
-                  <button 
-                    onClick={() => { setIsEditMode(false); setEditItems([]); }}
-                    style={{
-                      padding: "0.75rem 1.5rem",
-                      borderRadius: "8px",
-                      fontSize: "1rem",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      backgroundColor: "#6b7280",
-                      color: "white",
-                      border: "none"
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </>
               )}
             </div>
           </div>

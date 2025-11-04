@@ -240,61 +240,228 @@ export const updateOrderItems = async (req, res) => {
     const { orderId } = req.params;
     const { items } = req.body; // expected: [{ product, quantity, variant }]
 
+    console.log('Update order items request:', { orderId, itemsCount: items?.length });
+
     if (!Array.isArray(items)) {
       return res.status(400).json({ error: 'items must be an array' });
     }
 
-    const order = await Order.findById(orderId).populate('items.product');
+    if (items.length === 0) {
+      return res.status(400).json({ error: 'items array cannot be empty' });
+    }
+
+    // Fetch order with lean() to avoid Mongoose document circular references
+    const order = await Order.findById(orderId)
+      .populate('items.product', 'taxPercentage')
+      .lean();
+
     if (!order) {
+      console.error('Order not found:', orderId);
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    // Build a helper to match items by product and variant combination if present
-    const normalizeVariant = (v) => {
-      if (!v || !v.combination) return '';
-      const obj = Object.fromEntries(Object.entries(v.combination).sort(([a],[b]) => a.localeCompare(b)));
-      return JSON.stringify(obj);
+    // Helper to safely convert variant to a plain object and create a key
+    const getVariantKey = (variant) => {
+      if (!variant || !variant.combination) return '';
+      
+      try {
+        // Ensure we're working with a plain object
+        let combination = variant.combination;
+        
+        // If it's a Mongoose subdocument, convert to plain object
+        if (combination && typeof combination.toObject === 'function') {
+          combination = combination.toObject();
+        }
+        
+        // Ensure it's a plain object
+        if (typeof combination === 'object' && !Array.isArray(combination)) {
+          // Sort keys for consistent comparison
+          const sorted = Object.fromEntries(
+            Object.entries(combination).sort(([a], [b]) => a.localeCompare(b))
+          );
+          // Convert to JSON string for comparison (safe since it's a plain object now)
+          return JSON.stringify(sorted);
+        }
+        
+        // If it's already a string or other type, stringify it
+        return JSON.stringify(combination);
+      } catch (err) {
+        console.error('Error processing variant:', err);
+        return '';
+      }
     };
 
+    // Helper to safely extract variant as plain object
+    const getPlainVariant = (variant) => {
+      if (!variant) return null;
+      
+      try {
+        // If it's a Mongoose subdocument, convert to plain object
+        if (variant && typeof variant.toObject === 'function') {
+          const plain = variant.toObject();
+          // Ensure combination is also plain
+          if (plain.combination && typeof plain.combination.toObject === 'function') {
+            plain.combination = plain.combination.toObject();
+          }
+          return plain;
+        }
+        
+        // If it's already a plain object, create a safe copy
+        if (typeof variant === 'object' && variant !== null) {
+          // Simple deep copy for plain objects (no circular refs)
+          const copy = {};
+          for (const key in variant) {
+            if (variant.hasOwnProperty(key)) {
+              const value = variant[key];
+              if (value && typeof value.toObject === 'function') {
+                copy[key] = value.toObject();
+              } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                copy[key] = { ...value }; // Shallow copy for nested objects
+              } else {
+                copy[key] = value;
+              }
+            }
+          }
+          return copy;
+        }
+        
+        return variant;
+      } catch (err) {
+        console.error('Error converting variant to plain object:', err);
+        // Return a minimal safe structure
+        return variant && typeof variant === 'object' ? { ...variant } : null;
+      }
+    };
+
+    // Create a map of requested items by product ID and variant key
     const requestedMap = new Map();
     for (const it of items) {
-      if (!it.product || typeof it.quantity !== 'number' || it.quantity < 0) {
-        return res.status(400).json({ error: 'Each item must include product and non-negative quantity' });
+      if (!it.product) {
+        console.warn('Skipping item without product:', it);
+        continue;
       }
-      const key = `${it.product}::${normalizeVariant(it.variant)}`;
-      requestedMap.set(key, it.quantity);
+      
+      const productId = it.product.toString();
+      const variantKey = getVariantKey(it.variant || null);
+      const key = `${productId}::${variantKey}`;
+      const qty = Math.max(0, Math.floor(Number(it.quantity) || 0));
+      
+      requestedMap.set(key, { 
+        quantity: qty, 
+        productId, 
+        variant: getPlainVariant(it.variant || null)
+      });
     }
 
-    // Update quantities; remove items with 0
+    if (requestedMap.size === 0) {
+      return res.status(400).json({ error: 'No valid items provided' });
+    }
+
+    // Build updated items array from existing order items
     const updatedItems = [];
-    for (const it of order.items) {
-      const key = `${it.product?._id || it.product}::${normalizeVariant(it.variant)}`;
-      const newQty = requestedMap.has(key) ? requestedMap.get(key) : it.quantity;
-      if (newQty > 0) {
-        it.quantity = newQty;
-        updatedItems.push(it);
+    
+    for (const existingItem of order.items) {
+      const productId = (existingItem.product?._id || existingItem.product).toString();
+      const variantKey = getVariantKey(existingItem.variant || null);
+      const key = `${productId}::${variantKey}`;
+      
+      if (requestedMap.has(key)) {
+        const requested = requestedMap.get(key);
+        if (requested.quantity > 0) {
+          // Create new item object with only plain values (no Mongoose refs)
+          updatedItems.push({
+            product: productId,
+            quantity: requested.quantity,
+            price: existingItem.price || 0,
+            discountedPrice: existingItem.discountedPrice || null,
+            seller: existingItem.seller ? (existingItem.seller._id || existingItem.seller).toString() : null,
+            variant: requested.variant || null
+          });
+        }
+        // Remove from map to track what was processed
+        requestedMap.delete(key);
+      } else {
+        // Item not in request, keep it as is (shouldn't happen in normal flow, but handle it)
+        if (existingItem.quantity > 0) {
+          updatedItems.push({
+            product: productId,
+            quantity: existingItem.quantity,
+            price: existingItem.price || 0,
+            discountedPrice: existingItem.discountedPrice || null,
+            seller: existingItem.seller ? (existingItem.seller._id || existingItem.seller).toString() : null,
+            variant: getPlainVariant(existingItem.variant || null)
+          });
+        }
       }
     }
 
-    order.items = updatedItems;
-
-    // Recalculate totalAmount as sum of (effective unit) * quantity
-    let newTotal = 0;
-    for (const it of order.items) {
-      const unit = (it.discountedPrice && it.discountedPrice < it.price) ? it.discountedPrice : it.price;
-      newTotal += (unit || 0) * (it.quantity || 0);
+    // Validate we have at least one item
+    if (updatedItems.length === 0) {
+      return res.status(400).json({ error: 'Order must have at least one item after update' });
     }
-    order.totalAmount = Number(newTotal.toFixed(2));
 
-    await order.save();
-    await order.populate('customer', 'name email phone');
-    await order.populate('items.product', 'name description photo category taxPercentage');
-    await order.populate('items.seller', 'name email');
+    console.log('Updated items count:', updatedItems.length);
 
-    return res.status(200).json({ message: 'Order items updated', order });
+    // Fetch order document (not lean) to update it
+    const orderDoc = await Order.findById(orderId);
+    if (!orderDoc) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    // Update order items
+    orderDoc.items = updatedItems;
+
+    // Recalculate totalAmount including tax for all items
+    let subtotal = 0;
+    let totalTax = 0;
+    
+    for (const item of updatedItems) {
+      const product = await Product.findById(item.product).select('taxPercentage').lean();
+      if (!product) {
+        console.warn('Product not found for item:', item.product);
+        continue;
+      }
+      
+      const unitPrice = (item.discountedPrice && item.discountedPrice < item.price) 
+        ? item.discountedPrice 
+        : item.price;
+      const lineSubtotal = (unitPrice || 0) * (item.quantity || 0);
+      const taxPercentage = product.taxPercentage || 0;
+      const lineTax = (lineSubtotal * taxPercentage) / 100;
+      
+      subtotal += lineSubtotal;
+      totalTax += lineTax;
+    }
+    
+    const grandTotal = subtotal + totalTax;
+    orderDoc.totalAmount = Number(grandTotal.toFixed(2));
+
+    console.log('Recalculated totals:', { subtotal, totalTax, grandTotal });
+
+    await orderDoc.save();
+    console.log('Order saved successfully');
+
+    // Refetch with lean() to get plain objects without circular references
+    const updatedOrder = await Order.findById(orderId)
+      .populate('customer', 'name email phone')
+      .populate('items.product', 'name description photo category taxPercentage')
+      .populate('items.seller', 'name email')
+      .lean();
+
+    if (!updatedOrder) {
+      return res.status(404).json({ error: 'Order not found after update' });
+    }
+
+    console.log('Order update completed successfully');
+    return res.status(200).json({ message: 'Order items updated', order: updatedOrder });
+    
   } catch (error) {
     console.error('Error updating order items:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Failed to update order items', 
+      message: error.message 
+    });
   }
 };
 

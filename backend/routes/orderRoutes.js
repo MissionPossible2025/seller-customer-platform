@@ -7,6 +7,7 @@ import {
   getOrderById,
   updateOrderStatus,
   updateDeliveryStatus,
+  updateOrderItems,
   getAllOrders,
   markOrdersAsViewed
 } from '../controllers/orderController.js';
