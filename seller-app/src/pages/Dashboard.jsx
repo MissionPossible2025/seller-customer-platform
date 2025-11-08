@@ -14,6 +14,9 @@ export default function Dashboard({ user }) {
   const [arrangeMode, setArrangeMode] = useState({}); // per-category arrange mode
   const [dragState, setDragState] = useState({ category: null, productId: null });
   const [categoryBuffers, setCategoryBuffers] = useState({}); // local per-category order while arranging
+  const [showHighlightedProducts, setShowHighlightedProducts] = useState(false);
+  const [highlightedProductIds, setHighlightedProductIds] = useState([]);
+  const [newProductId, setNewProductId] = useState('');
   
 
   // Fetch products function
@@ -81,7 +84,49 @@ export default function Dashboard({ user }) {
     }
   }, [user?._id]);
 
-  
+  // Fetch highlighted products
+  useEffect(() => {
+    const fetchHighlightedProducts = async () => {
+      if (user?._id) {
+        try {
+          const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/highlighted-products/seller/${user._id}`);
+          setHighlightedProductIds(response.data.highlighted?.productIds || []);
+        } catch (error) {
+          console.error('Error fetching highlighted products:', error);
+        }
+      }
+    };
+    fetchHighlightedProducts();
+  }, [user?._id]);
+
+  // Add highlighted product ID
+  const handleAddHighlightedProduct = async () => {
+    if (!newProductId.trim()) {
+      alert('Please enter a product ID');
+      return;
+    }
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/highlighted-products/seller/${user._id}/add`, {
+        productId: newProductId.trim()
+      });
+      setHighlightedProductIds([...highlightedProductIds, newProductId.trim()]);
+      setNewProductId('');
+    } catch (error) {
+      alert('Error adding product ID: ' + (error.response?.data?.error || error.message));
+    }
+  };
+
+  // Remove highlighted product ID
+  const handleRemoveHighlightedProduct = async (productId) => {
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/highlighted-products/seller/${user._id}/remove`, {
+        productId: productId
+      });
+      setHighlightedProductIds(highlightedProductIds.filter(id => id !== productId));
+    } catch (error) {
+      alert('Error removing product ID: ' + (error.response?.data?.error || error.message));
+    }
+  };
 
   // Group products by category and sort by displayOrder
   const groupedProducts = products.reduce((groups, product) => {
@@ -194,6 +239,24 @@ export default function Dashboard({ user }) {
               onMouseOut={(e) => e.target.style.backgroundColor = "#646cff"}
             >
               Add New Product
+            </button>
+            <button 
+              onClick={() => setShowHighlightedProducts(true)}
+              style={{
+                padding: "1rem 2rem",
+                borderRadius: "8px",
+                fontSize: "1.1rem",
+                fontWeight: "600",
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+                backgroundColor: "#22c55e",
+                color: "white",
+                border: "none"
+              }}
+              onMouseOver={(e) => e.target.style.backgroundColor = "#16a34a"}
+              onMouseOut={(e) => e.target.style.backgroundColor = "#22c55e"}
+            >
+              Add Highlighted Product
             </button>
             {/* Edit Item button removed to keep single edit entry point */}
             <button 
@@ -592,6 +655,143 @@ export default function Dashboard({ user }) {
               }}
               onClick={(e) => e.stopPropagation()}
             />
+          </div>
+        )}
+
+        {/* Highlighted Products Modal */}
+        {showHighlightedProducts && (
+          <div
+            onClick={() => setShowHighlightedProducts(false)}
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: "rgba(0,0,0,0.8)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1000,
+              padding: "1rem"
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                backgroundColor: "white",
+                borderRadius: "16px",
+                padding: "2rem",
+                maxWidth: "500px",
+                width: "100%",
+                boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+                <h2 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 700 }}>Highlighted Products</h2>
+                <button
+                  onClick={() => setShowHighlightedProducts(false)}
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    border: "none",
+                    background: "#f3f4f6",
+                    cursor: "pointer",
+                    fontSize: "18px",
+                    color: "#6b7280"
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div style={{ marginBottom: "1.5rem" }}>
+                <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500 }}>Product ID</label>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <input
+                    type="text"
+                    value={newProductId}
+                    onChange={(e) => setNewProductId(e.target.value)}
+                    placeholder="Enter product ID"
+                    style={{
+                      flex: 1,
+                      padding: "0.75rem",
+                      borderRadius: "8px",
+                      border: "1px solid #d1d5db",
+                      fontSize: "1rem"
+                    }}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddHighlightedProduct();
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={handleAddHighlightedProduct}
+                    style={{
+                      padding: "0.75rem 1.5rem",
+                      borderRadius: "8px",
+                      border: "none",
+                      background: "#22c55e",
+                      color: "white",
+                      cursor: "pointer",
+                      fontSize: "1rem",
+                      fontWeight: 600,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem"
+                    }}
+                  >
+                    <span>+</span> Add
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500 }}>Highlighted Product IDs</label>
+                {highlightedProductIds.length === 0 ? (
+                  <div style={{ color: "#6b7280", padding: "1rem", textAlign: "center", border: "1px dashed #d1d5db", borderRadius: "8px" }}>
+                    No highlighted products yet
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                    {highlightedProductIds.map((productId, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          padding: "0.75rem 1rem",
+                          background: "#f9fafb",
+                          borderRadius: "8px",
+                          border: "1px solid #e5e7eb"
+                        }}
+                      >
+                        <span style={{ fontWeight: 500 }}>{productId}</span>
+                        <button
+                          onClick={() => handleRemoveHighlightedProduct(productId)}
+                          style={{
+                            padding: "0.5rem 1rem",
+                            borderRadius: "6px",
+                            border: "1px solid #dc2626",
+                            background: "#dc2626",
+                            color: "white",
+                            cursor: "pointer",
+                            fontSize: "0.875rem",
+                            fontWeight: 600
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
