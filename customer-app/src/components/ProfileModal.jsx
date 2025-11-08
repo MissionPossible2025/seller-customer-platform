@@ -111,8 +111,8 @@ export default function ProfileModal({ isOpen, onClose }) {
       // Determine which API endpoint to use based on user data structure
       const isCustomerLogin = parsedUser.customer && parsedUser.customer._id
       const apiEndpoint = isCustomerLogin 
-        ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/customers/${userId}`
-        : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/${userId}`
+        ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/customers/${userId}`
+        : `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/users/${userId}`
 
       console.log('ProfileModal: Using API endpoint:', apiEndpoint)
 

@@ -85,7 +85,7 @@ export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
   // Fetch categories from API
   const fetchCategories = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/categories`)
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/categories`)
       
       if (!response.ok) {
         const errorData = await response.json()
@@ -108,7 +108,7 @@ export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
   const fetchProducts = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/products`)
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/products`)
       
       if (!response.ok) {
         const errorData = await response.json()
@@ -255,7 +255,7 @@ export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
       // Re-fetch user data to ensure we have the latest profile
       if (actualUser?._id) {
         try {
-          const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/customers/${actualUser._id}`, {
+          const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/customers/${actualUser._id}`, {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
@@ -358,7 +358,7 @@ export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
           
           // Re-fetch user data to get updated profile
           if (actualUser?._id) {
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/customers/${actualUser._id}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/customers/${actualUser._id}`, {
               method: 'GET',
               headers: {
                 'Content-Type': 'application/json',

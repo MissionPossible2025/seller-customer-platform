@@ -151,7 +151,7 @@ export default function OrderSummary() {
       console.log('Order data to send:', JSON.stringify(orderDataToSend, null, 2))
       
       // Create order via API
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/orders`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/orders`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -170,7 +170,7 @@ export default function OrderSummary() {
           const user = getCurrentUser()
           const userId = getUserId(user)
           if (userId) {
-            await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cart/clear`, {
+            await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/cart/clear`, {
               method: 'DELETE',
               headers: {
                 'Content-Type': 'application/json'
@@ -253,8 +253,8 @@ export default function OrderSummary() {
       // Determine which API endpoint to use based on user data structure
       const isCustomerLogin = parsedUser.customer && parsedUser.customer._id
       const apiEndpoint = isCustomerLogin 
-        ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/customers/${userId}`
-        : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/${userId}`
+        ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/customers/${userId}`
+        : `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/users/${userId}`
 
       console.log('OrderSummary: Using API endpoint:', apiEndpoint)
 

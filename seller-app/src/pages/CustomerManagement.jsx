@@ -21,7 +21,7 @@ export default function CustomerManagement({ user }) {
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/customers/seller/${user?._id}`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/customers/seller/${user?._id}`);
         setCustomers(response.data);
       } catch (error) {
         console.error('Error fetching customers:', error);
@@ -44,7 +44,7 @@ export default function CustomerManagement({ user }) {
     }
 
     try {
-      const response = await axios.post('http://localhost:5000/api/customers', {
+      const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/customers`, {
         ...newCustomer,
         sellerId: user._id
       });
@@ -67,7 +67,7 @@ export default function CustomerManagement({ user }) {
     }
 
     try {
-      const response = await axios.put(`http://localhost:5000/api/customers/${editingCustomer._id}`, {
+      const response = await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/customers/${editingCustomer._id}`, {
         name: editingCustomer.name,
         phone: editingCustomer.phone
       });
@@ -87,7 +87,7 @@ export default function CustomerManagement({ user }) {
     }
 
     try {
-      await axios.delete(`http://localhost:5000/api/customers/${customerId}`);
+      await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/customers/${customerId}`);
       setCustomers(customers.filter(c => c._id !== customerId));
       alert('Customer removed successfully!');
     } catch (error) {
@@ -106,8 +106,8 @@ export default function CustomerManagement({ user }) {
     try {
       // Fetch latest customer profile and orders
       const [custRes, ordersRes] = await Promise.all([
-        axios.get(`http://localhost:5000/api/customers/${customer._id}`),
-        axios.get(`http://localhost:5000/api/orders/customer/${customer._id}`)
+        axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/customers/${customer._id}`),
+        axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/orders/customer/${customer._id}`)
       ]);
 
       const latestCustomer = custRes.data?.customer || customer;

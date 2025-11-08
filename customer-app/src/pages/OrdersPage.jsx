@@ -24,7 +24,7 @@ export default function OrdersPage() {
         return
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/orders/customer/${userId}`)
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/orders/customer/${userId}`)
       
       if (response.ok) {
         const data = await response.json()
@@ -41,7 +41,7 @@ export default function OrdersPage() {
           )
           
           if (hasUnviewedOrders) {
-            await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/orders/customer/${userId}/mark-viewed`, {
+            await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/orders/customer/${userId}/mark-viewed`, {
               method: 'PUT'
             })
             console.log('Marked orders as viewed')

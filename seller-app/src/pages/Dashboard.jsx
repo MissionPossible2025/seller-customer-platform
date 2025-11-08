@@ -20,7 +20,7 @@ export default function Dashboard({ user }) {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/products/seller/${user?._id}`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/products/seller/${user?._id}`);
         setProducts(response.data);
       } catch (error) {
         console.error('Error fetching products:', error);
@@ -38,7 +38,7 @@ export default function Dashboard({ user }) {
   useEffect(() => {
     const fetchUnreadCount = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/orders/seller/${user?._id}`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/orders/seller/${user?._id}`);
         const orders = response.data.orders || [];
         
         // Get last viewed timestamp from localStorage
@@ -344,7 +344,7 @@ export default function Dashboard({ user }) {
                 const saveArrange = async () => {
                   try {
                     const orderedIds = (categoryBuffers[category] || []).map((p) => p._id);
-                    await axios.put("http://localhost:5000/api/products/order/update", { productIds: orderedIds });
+                    await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/products/order/update`, { productIds: orderedIds });
                     alert("Order saved successfully!");
                     setArrangeMode((prev) => ({ ...prev, [category]: false }));
                     setCategoryBuffers((prev) => {
@@ -353,7 +353,7 @@ export default function Dashboard({ user }) {
                       return copy;
                     });
                     // Refresh products to reflect displayOrder from backend
-                    const response = await axios.get(`http://localhost:5000/api/products/seller/${user?._id}`);
+                    const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/products/seller/${user?._id}`);
                     setProducts(response.data);
                   } catch (err) {
                     alert("Failed to save order: " + err.message);

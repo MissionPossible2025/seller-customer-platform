@@ -41,7 +41,7 @@ export default function AuthPage() {
               const name = form.get('name')
 
               // Check if phone number is permitted by seller
-              const checkRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/customers/check`, {
+              const checkRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/customers/check`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ phone })
@@ -65,7 +65,7 @@ export default function AuthPage() {
               }
 
               // Access the app (same as login/signup)
-              const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/customers/login`, {
+              const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/customers/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ phone, name })

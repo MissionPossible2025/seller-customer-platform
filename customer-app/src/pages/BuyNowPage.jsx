@@ -88,7 +88,7 @@ export default function BuyNowPage() {
     // Re-fetch user data to ensure we have the latest profile
     if (actualUser?._id) {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/customers/${actualUser._id}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/customers/${actualUser._id}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

@@ -37,7 +37,7 @@ export default function EditItem() {
   // Fetch categories from API
   const fetchCategories = async () => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/categories`);
+      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/categories`);
       setCategories(response.data.categories || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -339,7 +339,7 @@ export default function EditItem() {
         formData.append('existingPhotos', url);
       });
       
-      const response = await axios.put(`http://localhost:5000/api/products/${id}`, formData, {
+      const response = await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/products/${id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       

@@ -12,7 +12,7 @@ export default function ProductPage() {
   // Fetch products from backend
   const fetchProducts = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/products");
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/products`);
       setProducts(res.data.products || res.data);
     } catch (err) {
       alert("Failed to fetch products: " + err.message);
@@ -22,7 +22,7 @@ export default function ProductPage() {
   const addProduct = async () => {
     if (!name || !price) return alert("Enter name and price");
     try {
-      await axios.post("http://localhost:5000/api/products", { name, price });
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/products`, { name, price });
       setName("");
       setPrice("");
       fetchProducts();
@@ -121,7 +121,7 @@ export default function ProductPage() {
           const saveArrange = async () => {
             try {
               const orderedIds = (categoryBuffers[category] || []).map((p) => p._id);
-              await axios.put("http://localhost:5000/api/products/order/update", { productIds: orderedIds });
+              await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/products/order/update`, { productIds: orderedIds });
               alert("Order saved");
               setArrangeMode((prev) => ({ ...prev, [category]: false }));
               setCategoryBuffers((prev) => {

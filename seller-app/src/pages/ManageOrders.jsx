@@ -25,7 +25,7 @@ export default function ManageOrders({ user }) {
 
       try {
         // Fetch orders filtered by seller ID
-        const response = await axios.get(`http://localhost:5000/api/orders/seller/${user._id}`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/orders/seller/${user._id}`);
         
         // Filter orders to show only items from this seller
         const ordersWithFilteredItems = (response.data.orders || []).map(order => ({
@@ -53,7 +53,7 @@ export default function ManageOrders({ user }) {
   // Handle order status update
   const handleStatusUpdate = async (orderId, newStatus) => {
     try {
-      const response = await axios.put(`http://localhost:5000/api/orders/${orderId}/status`, {
+      const response = await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/orders/${orderId}/status`, {
         status: newStatus,
         trackingNumber: trackingNumber
       });
@@ -130,7 +130,7 @@ export default function ManageOrders({ user }) {
         return;
       }
 
-      const response = await axios.put(`http://localhost:5000/api/orders/${selectedOrder._id}/items`, {
+      const response = await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/orders/${selectedOrder._id}/items`, {
         items: itemsToSave
       });
       

@@ -12,7 +12,7 @@ export default function OrderDetails() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/orders/${id}`);
+        const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/orders/${id}`);
         setOrder(res.data?.order || res.data);
       } catch (e) {
         setError("Failed to load order");

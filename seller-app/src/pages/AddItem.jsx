@@ -100,7 +100,7 @@ export default function AddItem({ user }) {
   // Fetch categories from API
   const fetchCategories = async () => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/categories`);
+      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/categories`);
       setCategories(response.data.categories || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -118,7 +118,7 @@ export default function AddItem({ user }) {
 
       if (!confirm(`Delete category "${category.name || category}" and ALL its products?`)) return;
 
-      await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/categories/${catId}?cascade=true`);
+      await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/categories/${catId}?cascade=true`);
       await fetchCategories();
       // Optionally, if currently selected category got deleted, reset selection
       if (selectedCategory === (category.name || category)) {
@@ -136,7 +136,7 @@ export default function AddItem({ user }) {
     if (!newCategory.name.trim()) return;
     
     try {
-      const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/categories`, newCategory);
+      const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/categories`, newCategory);
       setCategories(prev => [...prev, response.data.category]);
       setNewCategory({ name: '', description: '' });
       setShowAddCategory(false);
@@ -493,7 +493,7 @@ export default function AddItem({ user }) {
         formData.append('photo', productToSave.photo);
       }
 
-      const response = await axios.post("http://localhost:5000/api/products", formData, {
+      const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/products`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       alert("Product added successfully!");

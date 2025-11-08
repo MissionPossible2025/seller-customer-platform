@@ -16,7 +16,7 @@ export default function Sidebar({ isOpen, onClose }) {
         const userId = getUserId(getCurrentUser())
         if (!userId) return
 
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/orders/customer/${userId}`)
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/orders/customer/${userId}`)
         if (response.ok) {
           const data = await response.json()
           const orders = data.orders || []
@@ -43,7 +43,7 @@ export default function Sidebar({ isOpen, onClose }) {
   }, [isOpen])
 
   const handleOrdersClick = () => {
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/orders/customer/${getUserId(getCurrentUser())}/mark-viewed`, {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/orders/customer/${getUserId(getCurrentUser())}/mark-viewed`, {
       method: 'PUT'
     }).catch(console.error)
     setUnreadAcceptedCount(0)
