@@ -143,6 +143,50 @@ export default function OrderDetails() {
           </div>
         </div>
 
+        {/* Customer Information */}
+        <div style={{ marginBottom: "2rem" }}>
+          <h3 style={{ margin: "0 0 1rem 0", color: "#0f172a", fontSize: "1.2rem" }}>Customer Information</h3>
+          <div style={{ 
+            padding: "1.5rem", 
+            background: "#f8fafc", 
+            borderRadius: "12px",
+            border: "1px solid #e2e8f0"
+          }}>
+            <div style={{ 
+              display: "grid", 
+              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", 
+              gap: "1.5rem",
+              alignItems: "start"
+            }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <span style={{ fontWeight: "600", minWidth: "80px", color: "#374151" }}>Name:</span>
+                  <span style={{ color: "#6b7280" }}>{order.customerDetails?.name || 'N/A'}</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <span style={{ fontWeight: "600", minWidth: "80px", color: "#374151" }}>Email:</span>
+                  <span style={{ color: "#6b7280" }}>{order.customerDetails?.email || 'N/A'}</span>
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <span style={{ fontWeight: "600", minWidth: "80px", color: "#374151" }}>Phone:</span>
+                  <span style={{ color: "#6b7280" }}>{order.customerDetails?.phone || 'N/A'}</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem" }}>
+                  <span style={{ fontWeight: "600", minWidth: "80px", color: "#374151", marginTop: "0.125rem" }}>Address:</span>
+                  <span style={{ color: "#6b7280", lineHeight: "1.4" }}>
+                    {order.customerDetails?.address ? 
+                      `${order.customerDetails.address.street || ''}, ${order.customerDetails.address.city || ''}, ${order.customerDetails.address.state || ''} - ${order.customerDetails.address.pincode || ''}`.replace(/^,\s*|,\s*\$/g, '') :
+                      'N/A'
+                    }
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Order Items with tax details */}
         <div style={{ marginBottom: "2rem" }}>
           <h3 style={{ margin: "0 0 1rem 0", color: "#0f172a", fontSize: "1.2rem" }}>Order Items</h3>

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCart } from '../hooks/useCart'
-import { getCurrentUser, getUserId } from '../utils/userUtils'
+import { getCurrentUser, getUserId, getUserObject, isProfileComplete } from '../utils/userUtils'
+import ProfileModal from './ProfileModal'
 
 // Helper function to get discount percentage from product (uses seller-provided discountPercent)
 const getProductDiscountPct = (product) => {
@@ -52,6 +53,8 @@ export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
   const [touchEnd, setTouchEnd] = useState(null)
   const [categories, setCategories] = useState([])
   const [expandedCategories, setExpandedCategories] = useState({}) // Track which categories are expanded
+  const [showProfileModal, setShowProfileModal] = useState(false)
+  const [pendingBuyNow, setPendingBuyNow] = useState(null) // Store product and variant for buy now after profile completion
   const { fetchCartCount, addToCart: addToCartHook } = useCart()
   
   // Touch handlers for swipe functionality
@@ -211,7 +214,7 @@ export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
     }
   }
 
-  // Handle Buy Now
+  // Handle Buy Now - directly proceed to order summary
   const handleBuyNow = async (product) => {
     try {
       const isOutOfStock = product.hasVariations && selectedVariant 
@@ -246,10 +249,154 @@ export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
         return
       }
 
-      navigate('/buy-now', { state: { product, selectedVariant } })
+      // Get actual user object
+      let actualUser = getUserObject(user)
+      
+      // Re-fetch user data to ensure we have the latest profile
+      if (actualUser?._id) {
+        try {
+          const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/customers/${actualUser._id}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          })
+          
+          if (response.ok) {
+            const data = await response.json()
+            actualUser = data.customer || data.user || data
+            
+            // Update localStorage with latest data
+            const updatedUserData = { ...user }
+            if (updatedUserData.customer) {
+              updatedUserData.customer = actualUser
+            } else if (updatedUserData.user) {
+              updatedUserData.user = actualUser
+            }
+            localStorage.setItem('user', JSON.stringify(updatedUserData))
+          }
+        } catch (error) {
+          console.error('Error fetching latest user data:', error)
+        }
+      }
+
+      // Calculate price based on variant if applicable
+      let displayPrice, itemPrice, itemDiscountedPrice
+      
+      if (product.hasVariations && selectedVariant) {
+        itemPrice = selectedVariant.price
+        itemDiscountedPrice = selectedVariant.discountedPrice
+        displayPrice = itemDiscountedPrice && itemDiscountedPrice < itemPrice 
+          ? itemDiscountedPrice 
+          : itemPrice
+      } else {
+        itemPrice = product.price
+        itemDiscountedPrice = product.discountedPrice
+        displayPrice = itemDiscountedPrice && itemDiscountedPrice < itemPrice 
+          ? itemDiscountedPrice 
+          : itemPrice
+      }
+
+      const totalAmount = displayPrice * quantity
+
+      const orderData = {
+        user: {
+          name: actualUser?.name || '',
+          phone: actualUser?.phone || '',
+          address: actualUser?.address || {
+            street: '',
+            city: '',
+            state: '',
+            pincode: '',
+            country: 'India'
+          }
+        },
+        cart: {
+          items: [{
+            product: product,
+            quantity: quantity,
+            price: itemPrice,
+            discountedPrice: itemDiscountedPrice,
+            variant: selectedVariant ? {
+              combination: selectedVariant.combination,
+              price: selectedVariant.price,
+              originalPrice: selectedVariant.originalPrice,
+              stock: selectedVariant.stock
+            } : null
+          }]
+        },
+        totalAmount: totalAmount,
+        isBuyNow: true // Flag to indicate this is a buy now order
+      }
+
+      // Check if profile is complete, if not show modal
+      if (!isProfileComplete(user)) {
+        setPendingBuyNow({ product, selectedVariant, quantity, orderData })
+        setShowProfileModal(true)
+        setCartMessage('⚠️ Please complete your profile to proceed with checkout')
+        setTimeout(() => setCartMessage(''), 5000)
+        return
+      }
+
+      // Navigate directly to order summary
+      navigate('/order-summary', { state: { orderData } })
     } catch (error) {
       setCartMessage('❌ Failed to proceed with purchase')
       setTimeout(() => setCartMessage(''), 3000)
+    }
+  }
+
+  // Handle profile modal close
+  const handleProfileModalClose = async () => {
+    setShowProfileModal(false)
+    if (pendingBuyNow) {
+      // After profile is saved, re-fetch user data and proceed with buy now
+      setTimeout(async () => {
+        try {
+          const user = getCurrentUser()
+          let actualUser = getUserObject(user)
+          
+          // Re-fetch user data to get updated profile
+          if (actualUser?._id) {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/customers/${actualUser._id}`, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+              }
+            })
+            
+            if (response.ok) {
+              const data = await response.json()
+              actualUser = data.customer || data.user || data
+            }
+          }
+          
+          // Update orderData with latest user info
+          const updatedOrderData = {
+            ...pendingBuyNow.orderData,
+            user: {
+              name: actualUser?.name || '',
+              phone: actualUser?.phone || '',
+              address: actualUser?.address || {
+                street: '',
+                city: '',
+                state: '',
+                pincode: '',
+                country: 'India'
+              }
+            }
+          }
+          
+          setPendingBuyNow(null)
+          navigate('/order-summary', { state: { orderData: updatedOrderData } })
+        } catch (error) {
+          console.error('Error fetching updated user data:', error)
+          // Still proceed with existing orderData
+          const { orderData } = pendingBuyNow
+          setPendingBuyNow(null)
+          navigate('/order-summary', { state: { orderData } })
+        }
+      }, 1000) // Small delay to ensure profile is saved
     }
   }
 
@@ -377,6 +524,14 @@ export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
             </div>
           )
         })
+      )}
+
+      {/* Profile Modal */}
+      {showProfileModal && (
+        <ProfileModal 
+          isOpen={showProfileModal} 
+          onClose={handleProfileModalClose} 
+        />
       )}
 
       {/* Product Detail Modal */}
