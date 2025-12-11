@@ -67,23 +67,37 @@ const updateCustomer = async (req, res) => {
     const { id } = req.params;
     const { name, phone, email, address } = req.body;
 
+    console.log('Update customer request:', { id, name, phone, email, address });
+
     // Find the customer first
     const customer = await Customer.findById(id);
     if (!customer) {
+      console.error('Customer not found with ID:', id);
       return res.status(404).json({ error: 'Customer not found' });
     }
 
+    // Initialize address if it doesn't exist
+    if (!customer.address) {
+      customer.address = {
+        street: '',
+        city: '',
+        state: '',
+        pincode: '',
+        country: 'India'
+      };
+    }
+
     // Update fields if provided
-    if (name) customer.name = name.trim();
-    if (phone) customer.phone = phone;
+    if (name !== undefined && name !== null) customer.name = name.trim();
+    if (phone !== undefined && phone !== null) customer.phone = phone.trim();
     if (email !== undefined) customer.email = email ? email.trim().toLowerCase() : '';
     if (address) {
       customer.address = {
-        street: address.street || customer.address.street,
-        city: address.city || customer.address.city,
-        state: address.state || customer.address.state,
-        pincode: address.pincode || customer.address.pincode,
-        country: address.country || customer.address.country || 'India'
+        street: (address.street && address.street.trim()) || customer.address.street || '',
+        city: (address.city && address.city.trim()) || customer.address.city || '',
+        state: (address.state && address.state.trim()) || customer.address.state || '',
+        pincode: (address.pincode && address.pincode.trim()) || customer.address.pincode || '',
+        country: (address.country && address.country.trim()) || customer.address.country || 'India'
       };
     }
 
@@ -91,6 +105,7 @@ const updateCustomer = async (req, res) => {
     const isProfileComplete = Boolean(
       customer.name && customer.name.trim() &&
       customer.phone && customer.phone.trim() &&
+      customer.address && 
       customer.address.street && customer.address.street.trim() &&
       customer.address.city && customer.address.city.trim() &&
       customer.address.state && customer.address.state.trim() &&
@@ -100,13 +115,23 @@ const updateCustomer = async (req, res) => {
     customer.profileComplete = isProfileComplete;
 
     await customer.save();
+    console.log('Customer updated successfully:', customer._id);
     res.json({ message: "Profile updated successfully", customer });
   } catch (error) {
     console.error('Error updating customer:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      name: error.name,
+      stack: error.stack
+    });
     if (error.code === 11000) {
       res.status(400).json({ error: 'Customer with this phone number already exists' });
     } else {
-      res.status(500).json({ error: 'Failed to update customer' });
+      res.status(500).json({ 
+        error: 'Failed to update customer',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   }
 };

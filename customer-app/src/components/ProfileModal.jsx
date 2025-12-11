@@ -118,34 +118,75 @@ export default function ProfileModal({ isOpen, onClose }) {
 
       console.log('ProfileModal: Using API endpoint:', apiEndpoint)
 
+      // Prepare data for API - ensure address is properly structured
+      const updateData = {
+        name: formData.name.trim(),
+        phone: formData.phone.trim(),
+        email: formData.email ? formData.email.trim() : '',
+        address: {
+          street: formData.address.street.trim(),
+          city: formData.address.city.trim(),
+          state: formData.address.state.trim(),
+          pincode: formData.address.pincode.trim(),
+          country: formData.address.country || 'India'
+        }
+      }
+
+      console.log('ProfileModal: Sending update data:', updateData)
+
       const response = await fetch(apiEndpoint, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(updateData)
       })
 
-      const data = await response.json()
+      let data
+      try {
+        data = await response.json()
+      } catch (parseError) {
+        console.error('ProfileModal: Failed to parse response:', parseError)
+        const text = await response.text()
+        console.error('ProfileModal: Response text:', text)
+        setMessage('❌ Failed to update profile: Invalid server response')
+        setTimeout(() => setMessage(''), 3000)
+        setLoading(false)
+        return
+      }
+      
+      console.log('ProfileModal: Response status:', response.status)
+      console.log('ProfileModal: Response data:', data)
       
       if (response.ok) {
-        // Update localStorage with new user data
+        // Update localStorage with new user data including profileComplete flag
         let updatedUserData
+        const updatedCustomer = data.customer || data.user
+        
         if (parsedUser.customer) {
           // Handle customer login structure
           updatedUserData = {
             ...parsedUser,
-            customer: data.customer || data.user
+            customer: {
+              ...updatedCustomer,
+              profileComplete: updatedCustomer.profileComplete !== undefined ? updatedCustomer.profileComplete : true
+            }
           }
         } else if (parsedUser.user) {
           // Handle user login structure
           updatedUserData = {
             ...parsedUser,
-            user: data.user
+            user: {
+              ...updatedCustomer,
+              profileComplete: updatedCustomer.profileComplete !== undefined ? updatedCustomer.profileComplete : true
+            }
           }
         } else {
           // Handle direct user structure
-          updatedUserData = data.user
+          updatedUserData = {
+            ...updatedCustomer,
+            profileComplete: updatedCustomer.profileComplete !== undefined ? updatedCustomer.profileComplete : true
+          }
         }
         localStorage.setItem('user', JSON.stringify(updatedUserData))
         
@@ -155,12 +196,16 @@ export default function ProfileModal({ isOpen, onClose }) {
           onClose()
         }, 2000)
       } else {
-        setMessage(`❌ ₹{data.error}`)
-        setTimeout(() => setMessage(''), 3000)
+        const errorMessage = data.error || data.message || `Failed to update profile (Status: ${response.status})`
+        console.error('ProfileModal: Update failed:', errorMessage)
+        setMessage(`❌ ${errorMessage}`)
+        setTimeout(() => setMessage(''), 5000)
       }
     } catch (error) {
-      setMessage('❌ Failed to update profile')
-      setTimeout(() => setMessage(''), 3000)
+      console.error('ProfileModal: Error updating profile:', error)
+      const errorMessage = error.message || 'Failed to update profile. Please check your connection and try again.'
+      setMessage(`❌ ${errorMessage}`)
+      setTimeout(() => setMessage(''), 5000)
     } finally {
       setLoading(false)
     }

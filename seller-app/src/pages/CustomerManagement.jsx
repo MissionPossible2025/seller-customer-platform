@@ -157,17 +157,44 @@ export default function CustomerManagement({ user }) {
   };
 
   return (
-    <div style={{ 
-      display: "flex", 
-      flexDirection: "column", 
-      alignItems: "center", 
-      justifyContent: "center",
-      minHeight: "100vh",
-      width: "100%",
-      maxWidth: "1000px",
-      margin: "0 auto",
-      padding: "2rem"
-    }}>
+    <>
+      <style>{`
+        @media (max-width: 768px) {
+          .customer-list-header {
+            display: none !important;
+          }
+          .customer-list-row {
+            grid-template-columns: 1fr !important;
+            gap: 1rem !important;
+          }
+          .customer-list-row > div {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.75rem;
+          }
+          .customer-list-row > div:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+          }
+          .customer-list-row > div > div:first-child {
+            display: block !important;
+            margin-bottom: 0.5rem;
+          }
+          .customer-actions {
+            justify-content: flex-start !important;
+          }
+        }
+      `}</style>
+      <div style={{ 
+        display: "flex", 
+        flexDirection: "column", 
+        alignItems: "center", 
+        justifyContent: "center",
+        minHeight: "100vh",
+        width: "100%",
+        maxWidth: "1000px",
+        margin: "0 auto",
+        padding: "2rem"
+      }}>
       <div style={{
         backgroundColor: "rgba(255, 255, 255, 0.1)",
         padding: "2rem",
@@ -456,58 +483,104 @@ export default function CustomerManagement({ user }) {
           </div>
         ) : (
           <div style={{ 
-            display: "grid", 
-            gridTemplateColumns: "repeat(auto-fit, minmax(350px, 1fr))", 
-            gap: "1.5rem",
-            textAlign: "left"
+            display: "flex",
+            flexDirection: "column",
+            gap: "1rem",
+            textAlign: "left",
+            width: "100%"
           }}>
+            {/* Table Header */}
+            <div className="customer-list-header" style={{
+              display: "grid",
+              gridTemplateColumns: "2fr 1.5fr 2fr 1fr",
+              gap: "1rem",
+              padding: "1rem",
+              backgroundColor: "rgba(255, 255, 255, 0.1)",
+              borderRadius: "8px",
+              border: "1px solid rgba(255, 255, 255, 0.2)",
+              fontWeight: "600",
+              fontSize: "0.95rem",
+              color: "#fff"
+            }}>
+              <div>Name</div>
+              <div>Phone Number</div>
+              <div>Address</div>
+              <div style={{ textAlign: "right" }}>Actions</div>
+            </div>
+            
+            {/* Customer Rows */}
             {filteredCustomers.map((customer) => (
-              <div key={customer._id} style={{
+              <div key={customer._id} className="customer-list-row" style={{
+                display: "grid",
+                gridTemplateColumns: "2fr 1.5fr 2fr 1fr",
+                gap: "1rem",
+                padding: "1.25rem 1rem",
                 backgroundColor: "rgba(255, 255, 255, 0.05)",
-                padding: "1.5rem",
                 borderRadius: "12px",
                 border: "1px solid rgba(255, 255, 255, 0.1)",
-                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)"
+                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                alignItems: "center"
               }}>
-                <div style={{ marginBottom: "1rem" }}>
-                  <div style={{ color: "#aaa", fontSize: "0.9rem", marginBottom: "0.25rem" }}>Name</div>
-                  <div style={{ color: "#fff", fontWeight: "600", fontSize: "1.1rem" }}>
-                    {customer.name}
+                {/* Name */}
+                <div>
+                  <div style={{ color: "#aaa", fontSize: "0.85rem", marginBottom: "0.25rem", display: "none" }}>Name</div>
+                  <div style={{ color: "#000", fontWeight: "600", fontSize: "1.1rem" }}>
+                    {customer.name || '—'}
                   </div>
                 </div>
-                <div style={{ marginBottom: "1rem" }}>
-                  <div style={{ color: "#aaa", fontSize: "0.9rem", marginBottom: "0.25rem" }}>Phone</div>
-                  <div style={{ color: "#fff", fontSize: "1rem" }}>
-                    {customer.phone}
+                
+                {/* Phone */}
+                <div>
+                  <div style={{ color: "#aaa", fontSize: "0.85rem", marginBottom: "0.25rem", display: "none" }}>Phone</div>
+                  <div style={{ color: "#000", fontSize: "1rem" }}>
+                    {customer.phone || '—'}
                   </div>
                 </div>
-                <div style={{ marginBottom: "1.5rem" }}>
-                  <div style={{ color: "#aaa", fontSize: "0.9rem", marginBottom: "0.25rem" }}>Address</div>
-                  <div style={{ color: "#fff", fontSize: "0.95rem", lineHeight: 1.4 }}>
-                    <div>{customer?.address?.street || '—'}</div>
-                    <div>
-                      {(customer?.address?.city || '—')}, {(customer?.address?.state || '—')} {customer?.address?.pincode ? `- ${customer.address.pincode}` : ''}
-                    </div>
-                    <div>{customer?.address?.country || '—'}</div>
+                
+                {/* Address */}
+                <div>
+                  <div style={{ color: "#aaa", fontSize: "0.85rem", marginBottom: "0.25rem", display: "none" }}>Address</div>
+                  <div style={{ color: "#000", fontSize: "0.95rem", lineHeight: 1.5 }}>
+                    {customer?.address?.street ? (
+                      <>
+                        <div style={{ fontWeight: "500", color: "#000" }}>{customer.address.street}</div>
+                        <div style={{ color: "#000", fontSize: "0.9rem" }}>
+                          {customer.address.city || ''}{customer.address.city && customer.address.state ? ', ' : ''}
+                          {customer.address.state || ''}
+                          {customer.address.pincode ? ` - ${customer.address.pincode}` : ''}
+                        </div>
+                        {customer.address.country && customer.address.country !== 'India' && (
+                          <div style={{ color: "#000", fontSize: "0.85rem" }}>{customer.address.country}</div>
+                        )}
+                      </>
+                    ) : (
+                      <div style={{ color: "#000", fontStyle: "italic" }}>No address provided</div>
+                    )}
                   </div>
                 </div>
+                
+                {/* Actions */}
                 <div style={{ 
                   display: "flex", 
-                  gap: "0.75rem",
-                  justifyContent: "flex-end"
-                }}>
+                  gap: "0.5rem",
+                  justifyContent: "flex-end",
+                  flexWrap: "wrap"
+                }}
+                className="customer-actions"
+                >
                   <button
                     onClick={() => openHistory(customer)}
                     style={{
                       padding: "0.5rem 1rem",
                       borderRadius: "6px",
-                      fontSize: "0.9rem",
+                      fontSize: "0.85rem",
                       fontWeight: "500",
                       cursor: "pointer",
                       transition: "all 0.3s ease",
                       backgroundColor: "#0ea5e9",
                       color: "white",
-                      border: "none"
+                      border: "none",
+                      whiteSpace: "nowrap"
                     }}
                     onMouseOver={(e) => e.target.style.backgroundColor = "#0284c7"}
                     onMouseOut={(e) => e.target.style.backgroundColor = "#0ea5e9"}
@@ -519,13 +592,14 @@ export default function CustomerManagement({ user }) {
                     style={{
                       padding: "0.5rem 1rem",
                       borderRadius: "6px",
-                      fontSize: "0.9rem",
+                      fontSize: "0.85rem",
                       fontWeight: "500",
                       cursor: "pointer",
                       transition: "all 0.3s ease",
                       backgroundColor: "#3b82f6",
                       color: "white",
-                      border: "none"
+                      border: "none",
+                      whiteSpace: "nowrap"
                     }}
                     onMouseOver={(e) => e.target.style.backgroundColor = "#2563eb"}
                     onMouseOut={(e) => e.target.style.backgroundColor = "#3b82f6"}
@@ -537,13 +611,14 @@ export default function CustomerManagement({ user }) {
                     style={{
                       padding: "0.5rem 1rem",
                       borderRadius: "6px",
-                      fontSize: "0.9rem",
+                      fontSize: "0.85rem",
                       fontWeight: "500",
                       cursor: "pointer",
                       transition: "all 0.3s ease",
                       backgroundColor: "#ef4444",
                       color: "white",
-                      border: "none"
+                      border: "none",
+                      whiteSpace: "nowrap"
                     }}
                     onMouseOver={(e) => e.target.style.backgroundColor = "#dc2626"}
                     onMouseOut={(e) => e.target.style.backgroundColor = "#ef4444"}
@@ -1047,5 +1122,6 @@ export default function CustomerManagement({ user }) {
       )}
       </div>
     </div>
+    </>
   );
 }

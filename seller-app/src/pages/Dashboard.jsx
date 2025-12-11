@@ -613,25 +613,25 @@ export default function Dashboard({ user }) {
                         )}
                         <div style={{ marginBottom: "0.5rem" }}>
                           <div style={{ color: "#aaa", fontSize: "0.8rem" }}>Product Name</div>
-                          <div style={{ color: "#fff", fontWeight: 600 }}>{product.name}</div>
+                          <div style={{ color: "#000", fontWeight: 600 }}>{product.name}</div>
                         </div>
                         <div style={{ marginBottom: "0.5rem" }}>
                           <div style={{ color: "#aaa", fontSize: "0.8rem" }}>Description</div>
-                          <div style={{ color: "#ccc" }}>{product.description}</div>
+                          <div style={{ color: "#000" }}>{product.description}</div>
                         </div>
                         <div style={{ marginBottom: "1rem" }}>
                           <div style={{ color: "#aaa", fontSize: "0.8rem" }}>Price</div>
                           {product.discountedPrice && product.discountedPrice < product.price ? (
                             <div>
-                              <span style={{ textDecoration: "line-through", marginRight: "0.5rem", color: "#bbb" }}>
+                              <span style={{ textDecoration: "line-through", marginRight: "0.5rem", color: "#666" }}>
                                 ₹{product.price}
                               </span>
-                              <span style={{ color: "#4caf50", fontWeight: 700 }}>
+                              <span style={{ color: "#059669", fontWeight: 700 }}>
                                 ₹{product.discountedPrice}
                               </span>
                             </div>
                           ) : (
-                            <div style={{ color: "#fff" }}>₹{product.price}</div>
+                            <div style={{ color: "#000" }}>₹{product.price}</div>
                           )}
                         </div>
                         <div style={{ 

@@ -1,0 +1,12 @@
+<svg width="800" height="800" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">DaiLynk Logo</title>
+  <desc id="desc">Green D-shaped container with a black wrench silhouette.</desc>
+  <g transform="translate(120 90)">
+    <path
+      d="M0 0h320c190 0 320 124 320 310S510 620 320 620H0Z"
+      fill="#18b07d"/>
+    <path
+      d="M136 590c-10-10-10-26 0-36l92-92-40-40-92 92c-10 10-26 10-36 0l-38-38c-10-10-10-26 0-36l228-228c22-22 58-22 80 0l24 24c22 22 22 58 0 80l-54 54-40-40 54-54c6-6 6-17 0-24l-24-24c-7-7-17-7-24 0L90 462l38 38 92-92 86 86-92 92c-10 10-26 10-36 0Z"
+      fill="#0c1820"/>
+  </g>
+</svg>

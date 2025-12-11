@@ -66,10 +66,20 @@ export const isProfileComplete = (userData) => {
   if (!userData) return false
   
   const user = getUserObject(userData)
-  // Trust persisted backend-computed flag if present
-  if (user && user.profileComplete === true) return true
+  if (!user) return false
+  
+  // Trust persisted backend-computed flag if explicitly set
+  // If backend says profileComplete is true, trust it
+  if (user.profileComplete === true) return true
+  
+  // If backend explicitly says profileComplete is false, trust that too
+  // (don't fall back to field checking - backend is source of truth)
+  if (user.profileComplete === false) return false
 
-  return user.name && user.phone && 
+  // Fallback: check fields if profileComplete flag is not set (for backward compatibility)
+  return Boolean(
+    user.name && user.phone && 
     user.address?.street && user.address?.city && 
     user.address?.state && user.address?.pincode
+  )
 }

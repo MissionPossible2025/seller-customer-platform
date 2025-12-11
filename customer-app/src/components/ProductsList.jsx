@@ -38,7 +38,39 @@ const getVariantDiscountPct = (variant) => {
   return 0
 }
 
+// Ensure product images resolve correctly on all devices
+const resolveImageUrl = (url) => {
+  if (!url) return null
+  if (/^https?:\/\//i.test(url)) return url
+  const apiBase = import.meta.env.VITE_API_URL || ''
+  const host = apiBase.replace(/\/api\/?$/, '')
+  const cleanPath = url.startsWith('/') ? url : `/${url}`
+  return `${host}${cleanPath}`
+}
+
 export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
+  const responsiveGridStyles = `
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2.5rem;
+      grid-auto-rows: 1fr;
+      align-items: stretch;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    @media (max-width: 768px) {
+      .products-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+      }
+      .highlighted-nav-button {
+        display: none !important;
+      }
+    }
+  `
   const navigate = useNavigate()
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -734,97 +766,205 @@ export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
             fontSize: '1.5rem',
             fontWeight: '700',
             borderBottom: '2px solid #e2e8f0',
-            paddingBottom: '0.75rem'
+            paddingBottom: '0.75rem',
+            textAlign: 'center'
           }}>
             Highlighted Products
           </h2>
           <div
             style={{
-              display: 'grid',
-              gridTemplateColumns: `repeat(auto-fit, minmax(200px, 1fr))`,
-              gap: '1rem',
-              width: '100%'
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              width: '100%',
+              position: 'relative',
+              overflow: 'hidden'
             }}
+            onTouchStart={handleHighlightedTouchStart}
+            onTouchMove={handleHighlightedTouchMove}
+            onTouchEnd={handleHighlightedTouchEnd}
           >
-            {highlightedProducts.map((product, index) => (
-              <div
-                key={product._id || index}
+            {/* Left arrow button */}
+            {highlightedProducts.length > 1 && (
+              <button
+                className="highlighted-nav-button"
                 onClick={() => {
-                  setSelectedProduct(product)
-                  setQuantity(1)
-                  setCurrentImageIndex(0)
-                  setSelectedVariant(null)
-                  setSelectedAttributes({})
+                  setCurrentHighlightedIndex(prev => prev > 0 ? prev - 1 : highlightedProducts.length - 1)
                 }}
                 style={{
-                  position: 'relative',
-                  width: '100%',
-                  aspectRatio: '4/3',
-                  borderRadius: '12px',
-                  overflow: 'hidden',
+                  position: 'absolute',
+                  left: '1rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  border: '2px solid #e2e8f0',
+                  borderRadius: '50%',
+                  width: '48px',
+                  height: '48px',
                   cursor: 'pointer',
-                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                  background: '#f3f4f6'
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.5rem',
+                  color: '#0f172a',
+                  zIndex: 10,
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                  transition: 'all 0.2s'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-4px)'
-                  e.currentTarget.style.boxShadow = '0 8px 12px rgba(0, 0, 0, 0.15)'
+                  e.target.style.background = '#ffffff'
+                  e.target.style.borderColor = '#3b82f6'
+                  e.target.style.color = '#3b82f6'
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)'
+                  e.target.style.background = 'rgba(255, 255, 255, 0.9)'
+                  e.target.style.borderColor = '#e2e8f0'
+                  e.target.style.color = '#0f172a'
                 }}
               >
-                <img
-                  src={
-                    product.photos?.[0] ||
-                    product.photo ||
-                    'https://via.placeholder.com/400x300?text=No+Image'
-                  }
-                  alt={product.name || 'Highlighted Product'}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover'
-                  }}
-                  onError={(e) => {
-                    e.target.src = 'https://via.placeholder.com/400x300?text=No+Image'
-                  }}
-                />
-                {/* Product name overlay on hover */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)',
-                    color: 'white',
-                    padding: '1rem',
-                    opacity: 0,
-                    transition: 'opacity 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '1'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '0'
-                  }}
-                >
-                  <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>
-                    {product.name}
-                  </div>
-                  {product.price && (
-                    <div style={{ fontSize: '0.8rem', marginTop: '0.25rem' }}>
-                      ₹{product.discountedPrice && product.discountedPrice < product.price 
-                        ? product.discountedPrice 
-                        : product.price}
+                ‹
+              </button>
+            )}
+            <div
+              style={{
+                display: 'flex',
+                width: '100%',
+                maxWidth: '500px',
+                justifyContent: 'center',
+                alignItems: 'center',
+                position: 'relative'
+              }}
+            >
+              {highlightedProducts.map((product, index) => {
+                if (index !== currentHighlightedIndex) return null
+                
+                return (
+                  <div
+                    key={product._id || index}
+                    onClick={() => {
+                      setSelectedProduct(product)
+                      setQuantity(1)
+                      setCurrentImageIndex(0)
+                      setSelectedVariant(null)
+                      setSelectedAttributes({})
+                    }}
+                    style={{
+                      position: 'relative',
+                      width: '100%',
+                      aspectRatio: '4/3',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                      background: '#f3f4f6'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-4px)'
+                      e.currentTarget.style.boxShadow = '0 8px 12px rgba(0, 0, 0, 0.15)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)'
+                    }}
+                  >
+                    <img
+                      src={resolveImageUrl(
+                        product.photos?.[0] ||
+                        product.photo ||
+                        product.image ||
+                        'https://via.placeholder.com/400x300?text=No+Image'
+                      )}
+                      alt={product.name || 'Highlighted Product'}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
+                      }}
+                      onError={(e) => {
+                        e.target.src = 'https://via.placeholder.com/400x300?text=No+Image'
+                      }}
+                    />
+                    {/* Product name overlay */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)',
+                        color: 'white',
+                        padding: '1rem'
+                      }}
+                    >
+                      <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>
+                        {product.name}
+                      </div>
+                      {product.price && (
+                        <div style={{ fontSize: '0.8rem', marginTop: '0.25rem' }}>
+                          ₹{product.discountedPrice && product.discountedPrice < product.price 
+                            ? product.discountedPrice 
+                            : product.price}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
-            ))}
+                  </div>
+                )
+              })}
+            </div>
+            {/* Right arrow button */}
+            {highlightedProducts.length > 1 && (
+              <button
+                className="highlighted-nav-button"
+                onClick={() => {
+                  setCurrentHighlightedIndex(prev => prev < highlightedProducts.length - 1 ? prev + 1 : 0)
+                }}
+                style={{
+                  position: 'absolute',
+                  right: '1rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  border: '2px solid #e2e8f0',
+                  borderRadius: '50%',
+                  width: '48px',
+                  height: '48px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.5rem',
+                  color: '#0f172a',
+                  zIndex: 10,
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = '#ffffff'
+                  e.target.style.borderColor = '#3b82f6'
+                  e.target.style.color = '#3b82f6'
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = 'rgba(255, 255, 255, 0.9)'
+                  e.target.style.borderColor = '#e2e8f0'
+                  e.target.style.color = '#0f172a'
+                }}
+              >
+                ›
+              </button>
+            )}
+          </div>
+          {/* Index indicator */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginTop: '1rem',
+            fontSize: '1rem',
+            color: '#64748b',
+            fontWeight: '500'
+          }}>
+            {currentHighlightedIndex + 1} / {highlightedProducts.length}
           </div>
         </div>
       )}
@@ -855,16 +995,7 @@ export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
                 {categoryName}
               </h2>
               
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(4, 1fr)', 
-                gap: '1.5rem',
-                marginBottom: '2.5rem',
-                gridAutoRows: '1fr',
-                alignItems: 'stretch',
-                width: '100%',
-                boxSizing: 'border-box'
-              }}>
+              <div className="products-grid">
                 {productsToShow.map(product => (
                   <ProductCard 
                     key={product._id} 
@@ -942,6 +1073,8 @@ export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
         })
       )}
 
+      <style>{responsiveGridStyles}</style>
+
       {/* Profile Modal */}
       {showProfileModal && (
         <ProfileModal 
@@ -978,6 +1111,12 @@ export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
 
 function ProductCard({ product, onClick, getProductDiscountPct }) {
   let displayPrice, hasDiscount;
+  const primaryPhoto =
+    product.image ||
+    (product.photos && product.photos.length > 0 && product.photos[0]) ||
+    product.photo ||
+    null;
+  const imageSrc = resolveImageUrl(primaryPhoto) || 'https://via.placeholder.com/400x300?text=No+Image';
   
   if (product.hasVariations && product.variants && product.variants.length > 0) {
     const prices = product.variants
@@ -1052,16 +1191,20 @@ function ProductCard({ product, onClick, getProductDiscountPct }) {
           {productPct}%
         </div>
       )}
-      {product.photo ? (
+      {primaryPhoto ? (
         <div style={{ marginBottom: '1rem', textAlign: 'center', flexShrink: 0 }}>
           <img 
-            src={product.photo} 
+            src={imageSrc} 
             alt={product.name}
             style={{
               width: '100%',
               height: '200px',
               objectFit: 'cover',
               borderRadius: '8px'
+            }}
+            onError={(e) => {
+              e.target.onerror = null
+              e.target.src = 'https://via.placeholder.com/400x300?text=No+Image'
             }}
           />
         </div>
@@ -1193,34 +1336,199 @@ function ProductDetailModal({
   getVariantDiscountPct
 }) {
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-      padding: '2rem'
-    }}
-    onClick={onClose}
-    >
-      <div style={{
-        background: 'white',
-        borderRadius: '16px',
-        padding: '2rem',
-        maxWidth: '800px',
-        width: '100%',
-        maxHeight: '90vh',
-        overflow: 'auto',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-        position: 'relative'
-      }}
-      onClick={(e) => e.stopPropagation()}
+    <>
+      <style>{`
+        .product-detail-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          padding: 2rem;
+        }
+        
+        .product-detail-modal-container {
+          background: white;
+          border-radius: 16px;
+          padding: 2rem;
+          max-width: 800px;
+          width: 100%;
+          max-height: 90vh;
+          overflow: auto;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          position: relative;
+        }
+        
+        .product-detail-modal-content {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 2rem;
+          align-items: start;
+        }
+        
+        .product-detail-title {
+          margin: 0 0 1rem 0;
+          font-size: 2rem;
+          font-weight: 700;
+          color: #0f172a;
+          line-height: 1.2;
+        }
+        
+        .product-detail-section-title {
+          margin: 0 0 1rem 0;
+          color: #0f172a;
+          font-size: 1.3rem;
+          font-weight: 600;
+        }
+        
+        .product-detail-price {
+          font-size: 2.5rem;
+          font-weight: 700;
+          color: #059669;
+        }
+        
+        .product-detail-variant-price {
+          font-size: 2rem;
+          font-weight: 700;
+          color: #059669;
+        }
+        
+        .product-detail-image {
+          width: 100%;
+          height: auto;
+          border-radius: 12px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          margin-bottom: 1rem;
+          user-select: none;
+          max-width: 100%;
+          object-fit: contain;
+        }
+        
+        .product-detail-thumbnail {
+          width: 80px;
+          height: 80px;
+          object-fit: cover;
+          border-radius: 8px;
+        }
+        
+        .product-detail-description {
+          margin: 0;
+          color: #64748b;
+          font-size: 1.1rem;
+          line-height: 1.6;
+        }
+        
+        .product-detail-brand {
+          font-size: 1.8rem;
+          font-weight: 700;
+          color: #000000;
+          text-align: center;
+          padding: 0.75rem 1.5rem;
+          border: 2px solid #000000;
+          border-radius: 8px;
+          background: #ffffff;
+        }
+        
+        @media (max-width: 768px) {
+          .product-detail-modal-overlay {
+            padding: 0;
+            align-items: flex-start;
+          }
+          
+          .product-detail-modal-container {
+            border-radius: 0;
+            padding: 1rem;
+            max-width: 100vw;
+            width: 100vw;
+            max-height: 100vh;
+            height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+          }
+          
+          .product-detail-modal-content {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+          }
+          
+          .product-detail-title {
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+          }
+          
+          .product-detail-section-title {
+            font-size: 1.1rem;
+            margin-bottom: 0.75rem;
+          }
+          
+          .product-detail-price {
+            font-size: 1.8rem;
+          }
+          
+          .product-detail-variant-price {
+            font-size: 1.5rem;
+          }
+          
+          .product-detail-image {
+            max-height: 50vh;
+            object-fit: contain;
+            margin-bottom: 0.75rem;
+          }
+          
+          .product-detail-thumbnail {
+            width: 60px;
+            height: 60px;
+          }
+          
+          .product-detail-description {
+            font-size: 0.95rem;
+            line-height: 1.5;
+          }
+          
+          .product-detail-brand {
+            font-size: 1.3rem;
+            padding: 0.5rem 1rem;
+          }
+          
+          .product-detail-modal-container button {
+            font-size: 0.9rem !important;
+            padding: 0.75rem 1rem !important;
+          }
+          
+          .product-detail-modal-container input[type="number"] {
+            font-size: 1rem !important;
+            padding: 0.5rem !important;
+          }
+          
+          .product-detail-attribute-button {
+            font-size: 0.85rem !important;
+            padding: 0.4rem 0.75rem !important;
+          }
+          
+          .product-detail-price-grid {
+            grid-template-columns: 1fr !important;
+            gap: 1rem !important;
+          }
+          
+          .product-detail-price-grid > div:empty {
+            display: none !important;
+          }
+        }
+      `}</style>
+      <div 
+        className="product-detail-modal-overlay"
+        onClick={onClose}
       >
+        <div 
+          className="product-detail-modal-container"
+          onClick={(e) => e.stopPropagation()}
+        >
         <button 
           onClick={onClose}
           style={{
@@ -1238,13 +1546,14 @@ function ProductDetailModal({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            zIndex: 10
           }}
         >
           ×
         </button>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', alignItems: 'start' }}>
+        <div className="product-detail-modal-content">
           {/* Product Images */}
           <div style={{ position: 'relative' }}>
             {(() => {
@@ -1273,16 +1582,9 @@ function ProductDetailModal({
               <div>
                 <div style={{ position: 'relative' }}>
                   <img 
-                    src={product.photos[currentImageIndex]} 
+                    src={resolveImageUrl(product.photos[currentImageIndex])} 
                     alt={product.name}
-                    style={{
-                      width: '100%',
-                      height: 'auto',
-                      borderRadius: '12px',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                      marginBottom: '1rem',
-                      userSelect: 'none'
-                    }}
+                    className="product-detail-image"
                     onTouchStart={onTouchStart}
                     onTouchMove={onTouchMove}
                     onTouchEnd={onTouchEnd}
@@ -1361,14 +1663,11 @@ function ProductDetailModal({
                     {product.photos.map((photo, index) => (
                       <img
                         key={index}
-                        src={photo}
+                        src={resolveImageUrl(photo)}
                         alt={`${product.name} ${index + 1}`}
                         onClick={() => onImageIndexChange(index)}
+                        className="product-detail-thumbnail"
                         style={{
-                          width: '80px',
-                          height: '80px',
-                          objectFit: 'cover',
-                          borderRadius: '8px',
                           border: currentImageIndex === index ? '2px solid #059669' : '1px solid #e2e8f0',
                           cursor: 'pointer',
                           opacity: currentImageIndex === index ? 1 : 0.7,
@@ -1381,38 +1680,22 @@ function ProductDetailModal({
               </div>
             ) : product.photo && (
               <img 
-                src={product.photo} 
+                src={resolveImageUrl(product.photo)} 
                 alt={product.name}
-                style={{
-                  width: '100%',
-                  height: 'auto',
-                  borderRadius: '12px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-                }}
+                className="product-detail-image"
               />
             )}
           </div>
           
           {/* Product Information */}
           <div>
-            <h2 style={{ 
-              margin: '0 0 1rem 0', 
-              fontSize: '2rem', 
-              fontWeight: '700',
-              color: '#0f172a',
-              lineHeight: '1.2'
-            }}>
+            <h2 className="product-detail-title">
               {product.name}
             </h2>
             
             {product.hasVariations && product.attributes && product.attributes.length > 0 ? (
               <div style={{ marginBottom: '2rem' }}>
-                <h3 style={{ 
-                  margin: '0 0 1rem 0', 
-                  color: '#0f172a', 
-                  fontSize: '1.3rem',
-                  fontWeight: '600'
-                }}>
+                <h3 className="product-detail-section-title">
                   Select Options
                 </h3>
                 
@@ -1434,15 +1717,14 @@ function ProductDetailModal({
                           <button
                             key={optIndex}
                             onClick={() => onAttributeSelection(attribute.name, option.name)}
+                            className="product-detail-attribute-button"
                             style={{
-                              padding: '0.5rem 1rem',
                               borderRadius: '6px',
                               border: isSelected ? '2px solid #3b82f6' : '1px solid #d1d5db',
                               background: isSelected ? '#eff6ff' : 'white',
                               color: isSelected ? '#1d4ed8' : '#374151',
                               cursor: 'pointer',
                               transition: 'all 0.2s',
-                              fontSize: '0.9rem',
                               fontWeight: '500'
                             }}
                           >
@@ -1480,12 +1762,18 @@ function ProductDetailModal({
                       )}
                     </div>
                     
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', alignItems: 'center', marginBottom: '0.5rem', gap: '1rem' }}>
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: '1fr 1fr 1fr', 
+                      alignItems: 'center', 
+                      marginBottom: '0.5rem', 
+                      gap: '1rem'
+                    }}
+                    className="product-detail-price-grid"
+                    >
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', justifyContent: 'flex-start' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                          <span style={{ 
-                            fontSize: '2rem', 
-                            fontWeight: '700', 
+                          <span className="product-detail-variant-price" style={{ 
                             color: selectedVariant.stock === 'out_of_stock' ? '#9ca3af' : '#059669'
                           }}>
                             ₹{selectedVariant.discountedPrice && selectedVariant.discountedPrice < selectedVariant.price 
@@ -1519,15 +1807,7 @@ function ProductDetailModal({
                       </div>
                       
                       {product.brand && (
-                        <div style={{ 
-                          fontSize: '1.8rem', 
-                          fontWeight: '700',
-                          color: '#000000',
-                          textAlign: 'center',
-                          padding: '0.75rem 1.5rem',
-                          border: '2px solid #000000',
-                          borderRadius: '8px',
-                          background: '#ffffff',
+                        <div className="product-detail-brand" style={{ 
                           display: 'flex',
                           justifyContent: 'center',
                           alignItems: 'center',
@@ -1544,14 +1824,18 @@ function ProductDetailModal({
               </div>
             ) : (
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', alignItems: 'center', marginBottom: '0.5rem', gap: '1rem' }}>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: '1fr 1fr 1fr', 
+                  alignItems: 'center', 
+                  marginBottom: '0.5rem', 
+                  gap: '1rem'
+                }}
+                className="product-detail-price-grid"
+                >
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', justifyContent: 'flex-start' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <span style={{ 
-                        fontSize: '2.5rem', 
-                        fontWeight: '700', 
-                        color: '#059669' 
-                      }}>
+                      <span className="product-detail-price">
                         ₹{product.discountedPrice && product.discountedPrice < product.price 
                           ? product.discountedPrice 
                           : product.price}
@@ -1583,15 +1867,7 @@ function ProductDetailModal({
                   </div>
                   
                   {product.brand && (
-                    <div style={{ 
-                      fontSize: '1.8rem', 
-                      fontWeight: '700',
-                      color: '#000000',
-                      textAlign: 'center',
-                      padding: '0.75rem 1.5rem',
-                      border: '2px solid #000000',
-                      borderRadius: '8px',
-                      background: '#ffffff',
+                    <div className="product-detail-brand" style={{ 
                       display: 'flex',
                       justifyContent: 'center',
                       alignItems: 'center',
@@ -1607,31 +1883,16 @@ function ProductDetailModal({
             )}
             
             <div style={{ marginBottom: '2rem' }}>
-              <h3 style={{ 
-                margin: '0 0 1rem 0', 
-                color: '#0f172a', 
-                fontSize: '1.3rem',
-                fontWeight: '600'
-              }}>
+              <h3 className="product-detail-section-title">
                 Description
               </h3>
-              <p style={{ 
-                margin: 0, 
-                color: '#64748b', 
-                fontSize: '1.1rem',
-                lineHeight: '1.6'
-              }}>
+              <p className="product-detail-description">
                 {product.description}
               </p>
             </div>
             
             <div style={{ marginBottom: '2rem' }}>
-              <h3 style={{ 
-                margin: '0 0 1rem 0', 
-                color: '#0f172a', 
-                fontSize: '1.3rem',
-                fontWeight: '600'
-              }}>
+              <h3 className="product-detail-section-title">
                 Quantity
               </h3>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -1795,7 +2056,8 @@ function ProductDetailModal({
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   )
 }
 

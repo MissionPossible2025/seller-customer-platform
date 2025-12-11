@@ -73,7 +73,16 @@ export default function AuthPage() {
               const data = await res.json()
               if (!res.ok) throw new Error(data.error || 'Access failed')
               
-              localStorage.setItem('user', JSON.stringify(data))
+              // Ensure profileComplete flag is properly stored
+              const userData = {
+                ...data,
+                customer: {
+                  ...data.customer,
+                  profileComplete: data.customer?.profileComplete !== undefined ? data.customer.profileComplete : false
+                }
+              }
+              
+              localStorage.setItem('user', JSON.stringify(userData))
               localStorage.setItem('lastLogin', new Date().toISOString())
               localStorage.setItem('lastLoginTime', new Date().toISOString())
               window.location.href = '/dashboard'
