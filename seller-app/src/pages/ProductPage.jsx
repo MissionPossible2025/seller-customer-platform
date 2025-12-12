@@ -189,8 +189,8 @@ export default function ProductPage() {
                     {p.photo && (
                       <img src={p.photo} alt={p.name} style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 8, marginBottom: 8 }} />
                     )}
-                    <div style={{ fontWeight: 600, color: "#111827", marginBottom: 4 }}>{p.name}</div>
-                    <div style={{ color: "#6b7280", fontSize: 14 }}>{p.brand || ""}</div>
+                    <div style={{ fontWeight: 600, color: "#ffffff", marginBottom: 4 }}>{p.name}</div>
+                    <div style={{ color: "#ffffff", fontSize: 14 }}>{p.description || p.brand || ""}</div>
                     <div style={{ marginTop: 6, fontWeight: 700, color: "#059669" }}>₹{p.discountedPrice && p.discountedPrice < p.price ? p.discountedPrice : p.price}</div>
                   </div>
                 ))}

@@ -1341,6 +1341,10 @@ function ProductDetailModal({
           justify-content: center;
           z-index: 1000;
           padding: 2rem;
+          overflow-x: hidden;
+          width: 100%;
+          max-width: 100vw;
+          box-sizing: border-box;
         }
         
         .product-detail-modal-container {
@@ -1350,9 +1354,11 @@ function ProductDetailModal({
           max-width: 800px;
           width: 100%;
           max-height: 90vh;
-          overflow: auto;
+          overflow-y: auto;
+          overflow-x: hidden;
           box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
           position: relative;
+          box-sizing: border-box;
         }
         
         .product-detail-modal-content {
@@ -1389,15 +1395,29 @@ function ProductDetailModal({
           color: #059669;
         }
         
-        .product-detail-image {
+        /* Container for product images to ensure consistent sizing */
+        .product-detail-image-container {
           width: 100%;
-          height: auto;
+          height: 400px;
           border-radius: 12px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          background-color: #f9fafb;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           margin-bottom: 1rem;
-          user-select: none;
+          overflow: hidden;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .product-detail-image-container img,
+        .product-detail-image {
           max-width: 100%;
+          max-height: 100%;
+          width: auto;
+          height: auto;
           object-fit: contain;
+          object-position: center;
+          user-select: none;
         }
         
         .product-detail-thumbnail {
@@ -1429,18 +1449,22 @@ function ProductDetailModal({
           .product-detail-modal-overlay {
             padding: 0;
             align-items: flex-start;
+            overflow-x: hidden;
+            width: 100%;
+            max-width: 100%;
           }
           
           .product-detail-modal-container {
             border-radius: 0;
             padding: 1rem;
-            max-width: 100vw;
-            width: 100vw;
+            max-width: 100%;
+            width: 100%;
             max-height: 100vh;
             height: 100vh;
             overflow-y: auto;
             overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
+            box-sizing: border-box;
           }
           
           .product-detail-modal-content {
@@ -1466,10 +1490,17 @@ function ProductDetailModal({
             font-size: 1.5rem;
           }
           
-          .product-detail-image {
+          .product-detail-image-container {
+            height: 300px;
             max-height: 50vh;
-            object-fit: contain;
             margin-bottom: 0.75rem;
+          }
+          
+          .product-detail-image {
+            height: auto;
+            max-height: 100%;
+            width: auto;
+            max-width: 100%;
           }
           
           .product-detail-thumbnail {
@@ -1510,6 +1541,22 @@ function ProductDetailModal({
           .product-detail-price-grid > div:empty {
             display: none !important;
           }
+          
+          /* Fix close button position on mobile - move to top-left */
+          .product-detail-close-button {
+            top: 1rem !important;
+            left: 1rem !important;
+            right: auto !important;
+            z-index: 20 !important;
+          }
+          
+          /* Ensure discount badge stays top-right on mobile */
+          .product-detail-discount-badge {
+            top: -8px !important;
+            right: -8px !important;
+            left: auto !important;
+            z-index: 15 !important;
+          }
         }
       `}</style>
       <div 
@@ -1521,6 +1568,7 @@ function ProductDetailModal({
           onClick={(e) => e.stopPropagation()}
         >
         <button 
+          className="product-detail-close-button"
           onClick={onClose}
           style={{
             position: 'absolute',
@@ -1550,21 +1598,23 @@ function ProductDetailModal({
             {(() => {
               const pct = selectedVariant ? getVariantDiscountPct(selectedVariant) : getProductDiscountPct(product)
               return pct > 0 ? (
-                <div style={{
-                  position: 'absolute',
-                  top: '-8px',
-                  right: '-8px',
-                  background: '#dc2626',
-                  color: 'white',
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 700,
-                  zIndex: 5
-                }}>
+                <div 
+                  className="product-detail-discount-badge"
+                  style={{
+                    position: 'absolute',
+                    top: '-8px',
+                    right: '-8px',
+                    background: '#dc2626',
+                    color: 'white',
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 700,
+                    zIndex: 5
+                  }}>
                   {pct}%
                 </div>
               ) : null
@@ -1572,14 +1622,16 @@ function ProductDetailModal({
             {product.photos && product.photos.length > 0 ? (
               <div>
                 <div style={{ position: 'relative' }}>
-                  <img 
-                    src={resolveImageUrl(product.photos[currentImageIndex])} 
-                    alt={product.name}
-                    className="product-detail-image"
-                    onTouchStart={onTouchStart}
-                    onTouchMove={onTouchMove}
-                    onTouchEnd={onTouchEnd}
-                  />
+                  <div className="product-detail-image-container">
+                    <img 
+                      src={resolveImageUrl(product.photos[currentImageIndex])} 
+                      alt={product.name}
+                      className="product-detail-image"
+                      onTouchStart={onTouchStart}
+                      onTouchMove={onTouchMove}
+                      onTouchEnd={onTouchEnd}
+                    />
+                  </div>
                   
                   {product.photos.length > 1 && (
                     <>
@@ -1670,11 +1722,13 @@ function ProductDetailModal({
                 )}
               </div>
             ) : product.photo && (
-              <img 
-                src={resolveImageUrl(product.photo)} 
-                alt={product.name}
-                className="product-detail-image"
-              />
+              <div className="product-detail-image-container">
+                <img 
+                  src={resolveImageUrl(product.photo)} 
+                  alt={product.name}
+                  className="product-detail-image"
+                />
+              </div>
             )}
           </div>
           

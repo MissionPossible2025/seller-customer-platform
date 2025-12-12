@@ -125,9 +125,24 @@ export default function Dashboard() {
             alt="DreamSync Creations logo"
             style={{ height: '52px', width: 'auto' }}
           />
-          <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', letterSpacing: '0.02em' }}>
-            Dreamsync Creations
-          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', letterSpacing: '0.02em' }}>
+              DreamSync Creations
+            </span>
+            <a 
+              href="mailto:dreamsynccreations@gmail.com"
+              style={{ 
+                fontSize: '0.9rem', 
+                color: '#3b82f6', 
+                textDecoration: 'none',
+                fontWeight: 500
+              }}
+              onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+              onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+            >
+              dreamsynccreations@gmail.com
+            </a>
+          </div>
         </div>
       </footer>
 
