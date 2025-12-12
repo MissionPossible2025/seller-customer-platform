@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getCurrentUser, getUserId } from '../utils/userUtils'
+import resolveImageUrl from '../utils/imageUtils'
 
 export default function OrdersPage() {
   const navigate = useNavigate()
@@ -559,7 +560,7 @@ export default function OrdersPage() {
             </div>
           )
         })()}
-      </div>
+        </div>
 
       {/* Order Details Modal */}
       {selectedOrder && (
@@ -660,7 +661,7 @@ export default function OrdersPage() {
                     <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                       {item.product?.photo && (
                         <img 
-                          src={item.product.photo} 
+                          src={resolveImageUrl(item.product.photo)} 
                           alt={item.product.name}
                           style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }}
                         />
@@ -745,7 +746,6 @@ export default function OrdersPage() {
           </div>
         </div>
       )}
-        </div>
       </div>
     </>
   )

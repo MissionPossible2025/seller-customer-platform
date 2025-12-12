@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { getCurrentUser, getUserId } from '../utils/userUtils'
+import resolveImageUrl from '../utils/imageUtils'
 
 export default function OrderSummary() {
   const location = useLocation()
@@ -656,7 +657,7 @@ export default function OrderSummary() {
                     <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                       {product.photo && (
                         <img 
-                          src={product.photo} 
+                          src={resolveImageUrl(product.photo)} 
                           alt={product.name}
                           style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }}
                         />

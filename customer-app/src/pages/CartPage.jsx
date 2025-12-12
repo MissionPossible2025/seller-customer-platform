@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import ProfileModal from '../components/ProfileModal'
 import { useCart } from '../hooks/useCart'
 import { getCurrentUser, getUserId, getUserObject, isProfileComplete } from '../utils/userUtils'
+import resolveImageUrl from '../utils/imageUtils'
 
 export default function CartPage() {
   const navigate = useNavigate()
@@ -332,7 +333,7 @@ export default function CartPage() {
                       {/* Product Image */}
                       {product && product.photo && (
                         <img 
-                          src={product.photo} 
+                          src={resolveImageUrl(product.photo)} 
                           alt={product.name || 'Product'}
                           className="cart-item-image"
                           style={{
@@ -480,8 +481,9 @@ export default function CartPage() {
                         Remove
                       </button>
                     </div>
-                  )
-                })}
+                  </div>
+                )
+              })}
               </div>
             </div>
 

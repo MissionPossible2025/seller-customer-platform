@@ -16,7 +16,11 @@ dotenv.config();
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+    origin: "*",
+    methods: "GET,POST,PUT,DELETE",
+    allowedHeaders: "Content-Type, Authorization"
+  }));
 
 // Static serving for uploaded files
 const __filename = fileURLToPath(import.meta.url);
@@ -37,4 +41,13 @@ await connectDB();
 app.get('/', (req, res) => res.send('Server is running'));
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Listen on all network interfaces (0.0.0.0) so mobile devices can access
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Accessible at: http://localhost:${PORT}`);
+  if (process.env.PUBLIC_BASE_URL) {
+    console.log(`Mobile access: ${process.env.PUBLIC_BASE_URL}`);
+  } else {
+    console.log('⚠️  PUBLIC_BASE_URL not set - mobile image loading may not work correctly');
+  }
+});

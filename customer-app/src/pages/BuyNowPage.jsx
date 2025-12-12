@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import ProfileModal from '../components/ProfileModal'
+import resolveImageUrl from '../utils/imageUtils'
 
 export default function BuyNowPage() {
   const location = useLocation()
@@ -313,7 +314,7 @@ export default function BuyNowPage() {
               {/* Product Image */}
               {product.photo && (
                 <img 
-                  src={product.photo} 
+                  src={resolveImageUrl(product.photo)} 
                   alt={product.name}
                   style={{
                     width: '120px',

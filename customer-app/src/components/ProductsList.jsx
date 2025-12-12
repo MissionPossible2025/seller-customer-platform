@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCart } from '../hooks/useCart'
 import { getCurrentUser, getUserId, getUserObject, isProfileComplete } from '../utils/userUtils'
+import resolveImageUrl from '../utils/imageUtils'
 import ProfileModal from './ProfileModal'
 
 // Helper function to get discount percentage from product (uses seller-provided discountPercent)
@@ -36,16 +37,6 @@ const getVariantDiscountPct = (variant) => {
     return Math.round((1 - disc / base) * 100)
   }
   return 0
-}
-
-// Ensure product images resolve correctly on all devices
-const resolveImageUrl = (url) => {
-  if (!url) return null
-  if (/^https?:\/\//i.test(url)) return url
-  const apiBase = import.meta.env.VITE_API_URL || ''
-  const host = apiBase.replace(/\/api\/?$/, '')
-  const cleanPath = url.startsWith('/') ? url : `/${url}`
-  return `${host}${cleanPath}`
 }
 
 export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import resolveImageUrl from "../utils/imageUtils";
 
 export default function OrderDetails() {
   const { id } = useParams();
@@ -203,7 +204,7 @@ export default function OrderDetails() {
                 <div style={{ display: "flex", gap: "1rem", alignItems: "flex-start" }}>
                   {item.product?.photo && (
                     <img 
-                      src={item.product.photo} 
+                      src={resolveImageUrl(item.product.photo)} 
                       alt={item.product.name}
                       style={{ 
                         width: "80px", 
