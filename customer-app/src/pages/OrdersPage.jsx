@@ -108,8 +108,40 @@ export default function OrdersPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '1.5rem' }}>
+    <>
+      <style>{`
+        @media (max-width: 768px) {
+          .orders-container {
+            padding: 1rem !important;
+          }
+          .order-info-grid {
+            grid-template-columns: 1fr !important;
+            gap: 0.75rem !important;
+          }
+          .order-item-details-grid {
+            grid-template-columns: 1fr !important;
+            gap: 0.5rem !important;
+          }
+          .filter-buttons {
+            gap: 0.5rem !important;
+          }
+          .filter-buttons button {
+            font-size: 0.8rem !important;
+            padding: 0.4rem 0.75rem !important;
+          }
+          .order-modal {
+            padding: 1rem !important;
+            max-width: 100% !important;
+            max-height: 100vh !important;
+            border-radius: 0 !important;
+          }
+          .order-modal-content {
+            padding: 1rem !important;
+          }
+        }
+      `}</style>
+      <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
+        <div className="orders-container" style={{ maxWidth: 1200, margin: '0 auto', padding: '1.5rem' }}>
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
@@ -132,7 +164,7 @@ export default function OrdersPage() {
           </div>
 
           {/* Filter Buttons */}
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <div className="filter-buttons" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <button
               onClick={() => setActiveFilter('all')}
               style={{
@@ -449,7 +481,7 @@ export default function OrdersPage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div className="order-info-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                   <div>
                     <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.25rem' }}>Items</div>
                     <div style={{ fontWeight: '600', color: '#0f172a' }}>
@@ -531,7 +563,7 @@ export default function OrdersPage() {
 
       {/* Order Details Modal */}
       {selectedOrder && (
-        <div style={{
+        <div className="order-modal" style={{
           position: 'fixed',
           top: 0,
           left: 0,
@@ -546,7 +578,7 @@ export default function OrdersPage() {
         }}
         onClick={() => setSelectedOrder(null)}
         >
-          <div style={{
+          <div className="order-modal-content" style={{
             background: 'white',
             borderRadius: '16px',
             padding: '2rem',
@@ -663,7 +695,7 @@ export default function OrdersPage() {
                       </div>
                     )}
                     
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', fontSize: '0.9rem' }}>
+                    <div className="order-item-details-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', fontSize: '0.9rem' }}>
                       <div>
                         <div style={{ color: '#64748b', marginBottom: '0.25rem' }}>Quantity</div>
                         <div style={{ fontWeight: '600', color: '#0f172a' }}>{item.quantity}</div>
@@ -713,7 +745,9 @@ export default function OrdersPage() {
           </div>
         </div>
       )}
-    </div>
+        </div>
+      </div>
+    </>
   )
 }
 

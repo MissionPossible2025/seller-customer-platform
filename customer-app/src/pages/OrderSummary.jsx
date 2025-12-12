@@ -331,8 +331,32 @@ export default function OrderSummary() {
   const cartItems = cart?.items || []
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
-      <div style={{ maxWidth: 800, margin: '0 auto', padding: '1.5rem' }}>
+    <>
+      <style>{`
+        @media (max-width: 768px) {
+          .order-summary-container {
+            padding: 1rem !important;
+          }
+          .address-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .price-quantity-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .order-item-grid {
+            grid-template-columns: 1fr !important;
+            gap: 0.75rem !important;
+          }
+          .order-buttons {
+            flex-direction: column !important;
+          }
+          .order-buttons button {
+            flex: 1 !important;
+          }
+        }
+      `}</style>
+      <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
+        <div className="order-summary-container" style={{ maxWidth: 800, margin: '0 auto', padding: '1.5rem' }}>
         <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <button
             onClick={handleBack}
@@ -532,7 +556,7 @@ export default function OrderSummary() {
                   }}
                 />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div className="address-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <div>
                   <label style={{ display: 'block', marginBottom: '0.35rem', color: '#64748b' }}>City</label>
                   <input
@@ -566,7 +590,7 @@ export default function OrderSummary() {
                   />
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div className="address-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <div>
                   <label style={{ display: 'block', marginBottom: '0.35rem', color: '#64748b' }}>Pincode</label>
                   <input
@@ -673,7 +697,7 @@ export default function OrderSummary() {
                     </div>
 
                     {/* Price and Quantity Details */}
-                    <div style={{ 
+                    <div className="price-quantity-grid" style={{ 
                       display: 'grid', 
                       gridTemplateColumns: '1fr 1fr', 
                       gap: '1rem',
@@ -899,7 +923,7 @@ export default function OrderSummary() {
           </div>
 
 
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+          <div className="order-buttons" style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
             <button
               onClick={handleBack}
               style={{ flex: 1, padding: '1rem', borderRadius: '8px', border: '1px solid #d1d5db', background: 'white', color: '#374151', fontSize: '1rem', fontWeight: '500', cursor: 'pointer' }}
@@ -915,7 +939,8 @@ export default function OrderSummary() {
             </button>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </>
   )
 }

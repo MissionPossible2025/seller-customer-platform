@@ -182,8 +182,47 @@ export default function CartPage() {
   const profileComplete = isProfileComplete(user)
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '1.5rem' }}>
+    <>
+      <style>{`
+        @media (max-width: 768px) {
+          .cart-container {
+            padding: 1rem !important;
+          }
+          .cart-layout {
+            grid-template-columns: 1fr !important;
+            gap: 1.5rem !important;
+          }
+          .cart-item {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+          }
+          .cart-item-image {
+            width: 100% !important;
+            height: 200px !important;
+            margin-bottom: 1rem;
+          }
+          .cart-item-details {
+            width: 100% !important;
+            margin-bottom: 1rem;
+          }
+          .cart-item-actions {
+            width: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 1rem;
+          }
+          .cart-item-price-section {
+            text-align: left !important;
+            width: 100%;
+          }
+          .order-summary-sticky {
+            position: relative !important;
+            top: auto !important;
+          }
+        }
+      `}</style>
+      <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
+        <div className="cart-container" style={{ maxWidth: 1200, margin: '0 auto', padding: '1.5rem' }}>
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
             <button
@@ -246,7 +285,7 @@ export default function CartPage() {
             </button>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
+          <div className="cart-layout" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
             {/* Cart Items */}
             <div>
               <div style={{ 
@@ -281,7 +320,7 @@ export default function CartPage() {
                   const itemTotal = displayPrice * item.quantity
 
                   return (
-                    <div key={(product && product._id) || item._id} style={{
+                    <div key={(product && product._id) || item._id} className="cart-item" style={{
                       display: 'flex',
                       gap: '1rem',
                       padding: '1rem',
@@ -295,6 +334,7 @@ export default function CartPage() {
                         <img 
                           src={product.photo} 
                           alt={product.name || 'Product'}
+                          className="cart-item-image"
                           style={{
                             width: '80px',
                             height: '80px',
@@ -305,7 +345,7 @@ export default function CartPage() {
                       )}
 
                       {/* Product Details */}
-                      <div style={{ flex: 1 }}>
+                      <div className="cart-item-details" style={{ flex: 1 }}>
                         <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', color: '#0f172a' }}>
                           {product?.name || 'Product'}
                           {product && product.unit && (
@@ -344,7 +384,8 @@ export default function CartPage() {
                       </div>
 
                       {/* Price and Quantity */}
-                      <div style={{ textAlign: 'right' }}>
+                      <div className="cart-item-actions" style={{ textAlign: 'right' }}>
+                        <div className="cart-item-price-section">
                         <div style={{ marginBottom: '0.5rem' }}>
                           <span style={{ fontSize: '1.1rem', fontWeight: '600', color: '#059669' }}>
                             ₹{displayPrice}
@@ -421,10 +462,10 @@ export default function CartPage() {
                         <div style={{ fontSize: '1rem', fontWeight: '600', color: '#0f172a' }}>
                           ₹{itemTotal.toFixed(2)}
                         </div>
-                      </div>
+                        </div>
 
-                      {/* Remove Button */}
-                      <button 
+                        {/* Remove Button */}
+                        <button 
                         onClick={() => product?._id && removeItem(product._id)}
                         style={{
                           padding: '0.5rem',
@@ -446,7 +487,7 @@ export default function CartPage() {
 
             {/* Order Summary */}
             <div>
-              <div style={{ 
+              <div className="order-summary-sticky" style={{ 
                 background: 'white',
                 borderRadius: '12px',
                 padding: '1.5rem',
@@ -550,6 +591,7 @@ export default function CartPage() {
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* Profile Modal */}
@@ -557,6 +599,6 @@ export default function CartPage() {
         isOpen={showProfileModal} 
         onClose={handleProfileModalClose} 
       />
-    </div>
+    </>
   )
 }
