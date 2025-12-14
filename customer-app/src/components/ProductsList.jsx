@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCart } from '../hooks/useCart'
 import { getCurrentUser, getUserId, getUserObject, isProfileComplete } from '../utils/userUtils'
-import resolveImageUrl from '../utils/imageUtils'
+import resolveImageUrl, { getPlaceholderImage } from '../utils/imageUtils'
 import ProfileModal from './ProfileModal'
 
 // Helper function to get discount percentage from product (uses seller-provided discountPercent)
@@ -404,6 +404,7 @@ export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
   const fetchProducts = async () => {
     try {
       setLoading(true)
+      // Fetch all products without pagination limits
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/products`)
       
       if (!response.ok) {
@@ -413,14 +414,24 @@ export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
       
       const data = await response.json()
       const productsList = data.products || []
-      console.log('[Highlighted] Products fetched from API, count:', productsList.length)
+      console.log('[Products] Products fetched from API, count:', productsList.length)
+      console.log('[Products] Total products available:', data.pagination?.total || productsList.length)
+      
       if (productsList.length > 0) {
-        console.log('[Highlighted] First product from API:', {
+        console.log('[Products] First product from API:', {
           name: productsList[0].name,
           productId: productsList[0].productId,
+          category: productsList[0].category,
           seller: productsList[0].seller,
-          sellerType: typeof productsList[0].seller
+          sellerType: typeof productsList[0].seller,
+          photo: productsList[0].photo,
+          photos: productsList[0].photos,
+          photosCount: productsList[0].photos ? productsList[0].photos.length : 0
         })
+        
+        // Log categories found
+        const categoriesFound = [...new Set(productsList.map(p => p.category).filter(Boolean))]
+        console.log('[Products] Categories found in products:', categoriesFound)
       }
       setProducts(productsList)
       
@@ -438,6 +449,12 @@ export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
   }
 
   const filteredProducts = products.filter(product => {
+    // Exclude electronics and clothing categories
+    const categoryLower = product.category?.toLowerCase() || ''
+    if (categoryLower === 'electronics' || categoryLower === 'clothing') {
+      return false
+    }
+    
     if (!externalSearchTerm) return true
     
     const searchLower = externalSearchTerm.toLowerCase()
@@ -449,11 +466,14 @@ export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
     )
   })
 
+  // Group products by category, ensuring all products are included
   const productsByCategory = filteredProducts.reduce((acc, product) => {
-    if (!acc[product.category]) {
-      acc[product.category] = []
+    // Handle products with missing or null categories
+    const categoryName = product.category || 'Uncategorized'
+    if (!acc[categoryName]) {
+      acc[categoryName] = []
     }
-    acc[product.category].push(product)
+    acc[categoryName].push(product)
     return acc
   }, {})
   
@@ -465,6 +485,12 @@ export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
       return orderA - orderB;
     });
   });
+  
+  // Log category information for debugging
+  console.log('[Products] Products grouped by category:', Object.keys(productsByCategory).map(cat => ({
+    category: cat,
+    count: productsByCategory[cat].length
+  })))
 
   // Handle attribute selection for multi-attribute products
   const handleAttributeSelection = (attributeName, optionName) => {
@@ -863,9 +889,8 @@ export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
                       src={resolveImageUrl(
                         product.photos?.[0] ||
                         product.photo ||
-                        product.image ||
-                        'https://via.placeholder.com/400x300?text=No+Image'
-                      )}
+                        product.image
+                      ) || getPlaceholderImage()}
                       alt={product.name || 'Highlighted Product'}
                       style={{
                         width: '100%',
@@ -873,7 +898,7 @@ export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
                         objectFit: 'cover'
                       }}
                       onError={(e) => {
-                        e.target.src = 'https://via.placeholder.com/400x300?text=No+Image'
+                        e.target.src = getPlaceholderImage()
                       }}
                     />
                     {/* Product name overlay */}
@@ -965,8 +990,8 @@ export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
           {externalSearchTerm ? 'No products found matching your search.' : 'No products available.'}
         </div>
       ) : (
-        categories.map(category => {
-          const categoryName = category.name || category
+        // Show all categories that have products, regardless of categories API response
+        Object.keys(productsByCategory).map(categoryName => {
           const categoryProducts = productsByCategory[categoryName]
           if (!categoryProducts || categoryProducts.length === 0) return null
 
@@ -1107,7 +1132,7 @@ function ProductCard({ product, onClick, getProductDiscountPct }) {
     (product.photos && product.photos.length > 0 && product.photos[0]) ||
     product.photo ||
     null;
-  const imageSrc = resolveImageUrl(primaryPhoto) || 'https://via.placeholder.com/400x300?text=No+Image';
+  const imageSrc = resolveImageUrl(primaryPhoto) || getPlaceholderImage();
   
   if (product.hasVariations && product.variants && product.variants.length > 0) {
     const prices = product.variants
@@ -1195,7 +1220,7 @@ function ProductCard({ product, onClick, getProductDiscountPct }) {
             }}
             onError={(e) => {
               e.target.onerror = null
-              e.target.src = 'https://via.placeholder.com/400x300?text=No+Image'
+              e.target.src = getPlaceholderImage()
             }}
           />
         </div>

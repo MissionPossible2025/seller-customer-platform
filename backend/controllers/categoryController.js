@@ -3,9 +3,47 @@ import Category from '../models/categoryModel.js';
 import Product from '../models/productModel.js';
 
 // Get all active categories
+// Also include categories that have active products, even if category is inactive
 export const getCategories = async (req, res) => {
   try {
-    const categories = await Category.find({ isActive: true }).sort({ name: 1 });
+    // Exclude electronics and clothing categories (case-insensitive)
+    const excludedCategories = ['electronics', 'clothing', 'Electronics', 'Clothing', 'ELECTRONICS', 'CLOTHING'];
+    
+    // Get all active categories, excluding electronics and clothing
+    const activeCategories = await Category.find({ 
+      isActive: true,
+      name: { $nin: excludedCategories }
+    }).sort({ name: 1 });
+    
+    // Get all unique category names from active products (excluding electronics and clothing)
+    const productsWithCategories = await Product.find({ 
+      isActive: true,
+      category: { $nin: excludedCategories }
+    }).distinct('category');
+    
+    // Get category objects for product categories that might not be in active categories
+    // Filter out excluded categories
+    const productCategories = await Category.find({ 
+      name: { 
+        $in: productsWithCategories,
+        $nin: excludedCategories
+      }
+    }).sort({ name: 1 });
+    
+    // Combine and deduplicate categories
+    const categoryMap = new Map();
+    activeCategories.forEach(cat => categoryMap.set(cat.name, cat));
+    productCategories.forEach(cat => {
+      if (!categoryMap.has(cat.name)) {
+        categoryMap.set(cat.name, cat);
+      }
+    });
+    
+    // Filter out excluded categories from final result
+    const categories = Array.from(categoryMap.values())
+      .filter(cat => !excludedCategories.includes(cat.name))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    
     res.json({ categories });
   } catch (error) {
     res.status(500).json({ error: error.message });

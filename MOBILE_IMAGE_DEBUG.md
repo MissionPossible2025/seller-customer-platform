@@ -137,3 +137,4 @@ If images still don't load:
 3. Verify the exact error message
 4. Check if `PUBLIC_BASE_URL` is set in backend `.env`
 
+

@@ -1,10 +1,55 @@
 // controllers/productController.js
 import Product from '../models/productModel.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadsDir = path.join(__dirname, '../uploads');
 
 // Helper to build absolute file URLs that work across devices.
-// Prefer PUBLIC_BASE_URL (e.g., http://192.168.1.7:5000) so mobile clients can load images.
+// Uses environment variable or falls back to hardcoded IP for consistent image URLs in database.
 const getBaseUrl = (req) => {
-  return process.env.PUBLIC_BASE_URL || `${req.protocol}://${req.get('host')}`;
+  // Use PUBLIC_BASE_URL from environment if available, otherwise use hardcoded IP
+  if (process.env.PUBLIC_BASE_URL) {
+    return process.env.PUBLIC_BASE_URL.replace(/\/+$/, ''); // Remove trailing slashes
+  }
+  // Fallback to hardcoded IP (for backward compatibility)
+  return 'http://10.253.19.114:5000';
+};
+
+// Helper to extract filename from URL
+const extractFilenameFromUrl = (url) => {
+  if (!url) return null;
+  // Handle both full URLs and relative paths
+  const urlParts = url.split('/');
+  const filename = urlParts[urlParts.length - 1];
+  return filename || null;
+};
+
+// Helper to delete image file from storage
+const deleteImageFile = (imageUrl) => {
+  try {
+    if (!imageUrl) return;
+    const filename = extractFilenameFromUrl(imageUrl);
+    if (!filename) return;
+    
+    const filePath = path.join(uploadsDir, filename);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      console.log(`Deleted image file: ${filename}`);
+    }
+  } catch (error) {
+    console.error(`Error deleting image file ${imageUrl}:`, error);
+    // Don't throw - continue even if file deletion fails
+  }
+};
+
+// Helper to delete multiple image files
+const deleteImageFiles = (imageUrls) => {
+  if (!Array.isArray(imageUrls)) return;
+  imageUrls.forEach(url => deleteImageFile(url));
 };
 
 // Create a new product
@@ -119,25 +164,91 @@ export const createProduct = async (req, res) => {
     
     const baseUrl = getBaseUrl(req);
 
+    // Debug logging for file uploads
+    console.log('[createProduct] Files received:', req.files ? Object.keys(req.files) : 'none');
+    if (req.files) {
+      console.log('[createProduct] File details:', {
+        photos: req.files.photos ? req.files.photos.length : 0,
+        photo: req.files.photo ? req.files.photo.length : 0
+      });
+    }
+
     if (req.files && Object.keys(req.files).length > 0) {
       // Check if files are named 'photos' (multiple) or 'photo' (single)
       const photoFiles = req.files.photos || [];
       const singlePhoto = req.files.photo?.[0];
       
       if (photoFiles && photoFiles.length > 0) {
-        // Multiple photos
-        photoUrls = photoFiles.map(file => `${baseUrl}/uploads/${file.filename}`);
+        // Multiple photos - validate filenames
+        photoUrls = photoFiles
+          .filter(file => file && file.filename && file.filename.trim() !== '')
+          .map(file => {
+            const url = `${baseUrl}/uploads/${file.filename}`;
+            console.log('[createProduct] Processing photo file:', file.filename, '->', url);
+            return url;
+          });
         
         // Set the first photo as the main photo for backward compatibility
         if (photoUrls.length > 0) {
           photoUrl = photoUrls[0];
+          console.log('[createProduct] Set main photo URL:', photoUrl);
         }
-      } else if (singlePhoto) {
-        // Single photo (backward compatibility)
+      } else if (singlePhoto && singlePhoto.filename && singlePhoto.filename.trim() !== '') {
+        // Single photo (backward compatibility) - validate filename
         photoUrl = `${baseUrl}/uploads/${singlePhoto.filename}`;
         photoUrls = [photoUrl];
+        console.log('[createProduct] Set single photo URL:', photoUrl);
+      }
+    } else {
+      // Fallback: check if photo URLs are provided in body
+      // Validate URLs before using them
+      const isValidUrl = (url) => {
+        if (!url || typeof url !== 'string') return false;
+        // Must be a valid URL pattern (http/https or /uploads/ path)
+        return /^https?:\/\/|^\/uploads\//.test(url.trim());
+      };
+      
+      if (req.body.photo && isValidUrl(req.body.photo)) {
+        photoUrl = req.body.photo.trim();
+        console.log('[createProduct] Using photo from body:', photoUrl);
+      } else if (req.body.photo) {
+        console.warn('[createProduct] Invalid photo URL in body, ignoring:', req.body.photo);
+      }
+      
+      if (req.body.photos) {
+        try {
+          const parsedPhotos = Array.isArray(req.body.photos) ? req.body.photos : JSON.parse(req.body.photos);
+          // Filter out invalid URLs
+          photoUrls = parsedPhotos.filter(url => isValidUrl(url)).map(url => url.trim());
+          if (photoUrls.length > 0 && !photoUrl) {
+            photoUrl = photoUrls[0];
+          }
+          console.log('[createProduct] Using photos from body (filtered):', photoUrls);
+        } catch (e) {
+          console.error('[createProduct] Error parsing photos from body:', e);
+        }
       }
     }
+    
+    // Ensure photo is set if we have photos array
+    if (!photoUrl && photoUrls.length > 0) {
+      photoUrl = photoUrls[0];
+      console.log('[createProduct] Set photo from photos array:', photoUrl);
+    }
+    
+    // Final validation - ensure we only save valid URLs
+    const finalPhotoUrl = photoUrl && /^https?:\/\/|^\/uploads\//.test(photoUrl) ? photoUrl : null;
+    const finalPhotoUrls = photoUrls.filter(url => url && /^https?:\/\/|^\/uploads\//.test(url));
+    
+    // If we have valid photos but no main photo, set it
+    if (!finalPhotoUrl && finalPhotoUrls.length > 0) {
+      photoUrl = finalPhotoUrls[0];
+    } else {
+      photoUrl = finalPhotoUrl;
+    }
+    photoUrls = finalPhotoUrls;
+    
+    console.log('[createProduct] Final photo URLs - photo:', photoUrl, 'photos:', photoUrls);
 
     // Create product data object
     const productData = {
@@ -147,16 +258,24 @@ export const createProduct = async (req, res) => {
       unit: unit || 'piece',
       description,
       category,
-      photo: photoUrl || req.body.photo,
-      photos: photoUrls.length > 0 ? photoUrls : (req.body.photos ? JSON.parse(req.body.photos) : []),
+      photo: photoUrl || req.body.photo || null,
+      photos: photoUrls.length > 0 ? photoUrls : (req.body.photos ? (Array.isArray(req.body.photos) ? req.body.photos : JSON.parse(req.body.photos)) : []),
       seller,
       sellerName,
       sellerEmail,
       taxPercentage: taxPercentage ? parseFloat(taxPercentage) : 0,
       hasVariations: hasVariations === 'true',
       attributes: parsedAttributes,
-      variants: parsedVariants
+      variants: parsedVariants,
+      isActive: true // Products are always visible when created
     };
+    
+    console.log('[createProduct] Product data before save:', {
+      name: productData.name,
+      photo: productData.photo,
+      photos: productData.photos,
+      photosCount: productData.photos ? productData.photos.length : 0
+    });
 
     // Add base price/stockStatus only if no variations
     if (!productData.hasVariations) {
@@ -173,7 +292,22 @@ export const createProduct = async (req, res) => {
 
     // Create new product
     const product = new Product(productData);
-    const savedProduct = await product.save();
+    let savedProduct;
+    try {
+      savedProduct = await product.save();
+      console.log('[createProduct] Product saved successfully:', {
+        id: savedProduct._id,
+        photo: savedProduct.photo,
+        photos: savedProduct.photos,
+        photosCount: savedProduct.photos ? savedProduct.photos.length : 0
+      });
+    } catch (error) {
+      // If product creation fails, clean up uploaded files
+      if (photoUrls.length > 0) {
+        deleteImageFiles(photoUrls);
+      }
+      throw error; // Re-throw to be caught by outer catch
+    }
     
     res.status(201).json({
       message: 'Product created successfully',
@@ -192,13 +326,36 @@ export const createProduct = async (req, res) => {
 // Get all products
 export const getAllProducts = async (req, res) => {
   try {
-    const { category, seller, search, page = 1, limit = 10 } = req.query;
+    const { category, seller, search, page, limit } = req.query;
     
     // Build filter object
     const filter = { isActive: true };
     
+    // Exclude electronics and clothing categories (case-insensitive)
+    const excludedCategories = ['electronics', 'clothing', 'Electronics', 'Clothing', 'ELECTRONICS', 'CLOTHING'];
+    
     if (category) {
-      filter.category = category;
+      // If a specific category is requested, check if it's excluded
+      const categoryLower = category.toLowerCase();
+      if (categoryLower === 'electronics' || categoryLower === 'clothing') {
+        // Return empty result if requesting excluded categories
+        return res.json({
+          products: [],
+          pagination: {
+            current: parseInt(page) || 1,
+            pages: 0,
+            total: 0
+          }
+        });
+      }
+      // Use $and to combine category match with exclusion
+      filter.$and = [
+        { category: category },
+        { category: { $nin: excludedCategories } }
+      ];
+    } else {
+      // No specific category requested, just exclude electronics and clothing
+      filter.category = { $nin: excludedCategories };
     }
     
     if (seller) {
@@ -209,22 +366,36 @@ export const getAllProducts = async (req, res) => {
       filter.$text = { $search: search };
     }
 
-    // Calculate pagination
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    // If no limit is specified, return all products (for customer app)
+    // If limit is specified, use pagination (for other use cases)
+    const usePagination = limit !== undefined && limit !== null && limit !== '';
+    const limitValue = usePagination ? parseInt(limit) : 10000; // Very high limit when pagination not used
+    const pageValue = parseInt(page) || 1;
+    const skip = usePagination ? (pageValue - 1) * limitValue : 0;
     
     const products = await Product.find(filter)
       .populate('seller', 'name email')
       .sort({ displayOrder: 1, createdAt: -1 })
       .skip(skip)
-      .limit(parseInt(limit));
+      .limit(limitValue);
+
+    // Log image data for debugging
+    if (products.length > 0) {
+      console.log('[getAllProducts] Sample product image data:', {
+        name: products[0].name,
+        photo: products[0].photo,
+        photos: products[0].photos,
+        photosCount: products[0].photos ? products[0].photos.length : 0
+      });
+    }
 
     const total = await Product.countDocuments(filter);
 
     res.json({
       products,
       pagination: {
-        current: parseInt(page),
-        pages: Math.ceil(total / parseInt(limit)),
+        current: pageValue,
+        pages: usePagination ? Math.ceil(total / limitValue) : 1,
         total
       }
     });
@@ -368,56 +539,167 @@ export const updateProduct = async (req, res) => {
     
     // Handle photo uploads - support both single and multiple photos
     let allPhotos = [];
+    let imagesToDelete = []; // Track old images to delete after successful update
     
     // Get existing product to preserve existing photos
     const existingProduct = await Product.findById(req.params.id);
-    let existingPhotos = existingProduct?.photos || [];
+    if (!existingProduct) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
     
-    if (req.files && Object.keys(req.files).length > 0) {
+    let existingPhotos = existingProduct?.photos || [];
+    const existingPhoto = existingProduct?.photo;
+    
+    // Handle image removal: if photo/photos are explicitly set to empty/null
+    if (req.body.removePhotos === 'true' || req.body.photos === '' || req.body.photo === '') {
+      // Mark all existing images for deletion
+      if (existingPhoto) imagesToDelete.push(existingPhoto);
+      if (existingPhotos && existingPhotos.length > 0) {
+        imagesToDelete.push(...existingPhotos);
+      }
+      allPhotos = [];
+      updateData.photos = [];
+      updateData.photo = null;
+    } else if (req.files && Object.keys(req.files).length > 0) {
+      // New images are being uploaded - replace existing ones
       const photoFiles = req.files.photos || [];
       const singlePhoto = req.files.photo?.[0];
       
       if (photoFiles && photoFiles.length > 0) {
-        // New uploaded photos
+        // Multiple photos - replace all existing
         const newPhotoUrls = photoFiles.map(file => `${baseUrl}/uploads/${file.filename}`);
-        allPhotos = [...existingPhotos, ...newPhotoUrls];
-        
+        // Mark old images for deletion (only after successful save)
+        if (existingPhoto) imagesToDelete.push(existingPhoto);
+        if (existingPhotos && existingPhotos.length > 0) {
+          imagesToDelete.push(...existingPhotos);
+        }
+        allPhotos = newPhotoUrls;
         updateData.photos = allPhotos;
         if (allPhotos.length > 0) {
           updateData.photo = allPhotos[0];
         }
       } else if (singlePhoto) {
-        // Single photo (backward compatibility)
-        updateData.photo = `${baseUrl}/uploads/${singlePhoto.filename}`;
-        allPhotos = [updateData.photo];
+        // Single photo replacement
+        const newPhotoUrl = `${baseUrl}/uploads/${singlePhoto.filename}`;
+        // Mark old images for deletion (only after successful save)
+        if (existingPhoto) imagesToDelete.push(existingPhoto);
+        if (existingPhotos && existingPhotos.length > 0) {
+          imagesToDelete.push(...existingPhotos);
+        }
+        updateData.photo = newPhotoUrl;
+        allPhotos = [newPhotoUrl];
         updateData.photos = allPhotos;
       }
     } else {
-      // Keep existing photos if no new files uploaded
-      if (existingPhotos && existingPhotos.length > 0) {
-        updateData.photos = existingPhotos;
-        updateData.photo = existingPhotos[0];
-      } else if (photo !== undefined) {
+      // No new files uploaded - keep existing photos unless explicitly changed
+      if (photo !== undefined && photo !== null && photo !== '') {
+        // Photo URL provided directly - replace existing
+        if (existingPhoto && existingPhoto !== photo) {
+          imagesToDelete.push(existingPhoto);
+        }
+        if (existingPhotos && existingPhotos.length > 0) {
+          const photoInExisting = existingPhotos.includes(photo);
+          if (!photoInExisting) {
+            // New photo URL provided, mark old ones for deletion
+            imagesToDelete.push(...existingPhotos);
+          }
+        }
         updateData.photo = photo;
+        updateData.photos = Array.isArray(req.body.photos) ? req.body.photos : [photo];
+      } else if (req.body.photos !== undefined) {
+        // Photos array provided directly
+        const newPhotos = Array.isArray(req.body.photos) ? req.body.photos : JSON.parse(req.body.photos || '[]');
+        // Find photos to delete (ones not in new list)
+        const photosToKeep = new Set(newPhotos);
+        if (existingPhoto && !photosToKeep.has(existingPhoto)) {
+          imagesToDelete.push(existingPhoto);
+        }
+        existingPhotos.forEach(existing => {
+          if (!photosToKeep.has(existing)) {
+            imagesToDelete.push(existing);
+          }
+        });
+        updateData.photos = newPhotos;
+        updateData.photo = newPhotos.length > 0 ? newPhotos[0] : null;
+      } else {
+        // Keep existing photos if no changes
+        if (existingPhotos && existingPhotos.length > 0) {
+          updateData.photos = existingPhotos;
+          updateData.photo = existingPhotos[0];
+        } else if (existingPhoto) {
+          updateData.photo = existingPhoto;
+          updateData.photos = [existingPhoto];
+        }
       }
     }
     
-    if (isActive !== undefined) updateData.isActive = isActive;
-
-    const product = await Product.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('seller', 'name email');
-
-    if (!product) {
-      return res.status(404).json({ error: 'Product not found' });
+    // Prevent hiding products through update - products can only be hidden via delete endpoint
+    // Only allow setting isActive to true if explicitly provided (to re-activate if needed)
+    if (isActive !== undefined && isActive === true) {
+      updateData.isActive = true;
     }
+    // If isActive is false, ignore it - products can only be hidden via deleteProduct endpoint
 
-    res.json({
-      message: 'Product updated successfully',
-      product
-    });
+    let product;
+    try {
+      product = await Product.findByIdAndUpdate(
+        req.params.id,
+        updateData,
+        { new: true, runValidators: true }
+      ).populate('seller', 'name email');
+
+      if (!product) {
+        // If update failed, clean up any newly uploaded files
+        if (req.files && Object.keys(req.files).length > 0) {
+          const photoFiles = req.files.photos || [];
+          const singlePhoto = req.files.photo?.[0];
+          if (photoFiles && photoFiles.length > 0) {
+            photoFiles.forEach(file => {
+              const filePath = path.join(uploadsDir, file.filename);
+              if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+              }
+            });
+          } else if (singlePhoto) {
+            const filePath = path.join(uploadsDir, singlePhoto.filename);
+            if (fs.existsSync(filePath)) {
+              fs.unlinkSync(filePath);
+            }
+          }
+        }
+        return res.status(404).json({ error: 'Product not found' });
+      }
+
+      // Delete old image files only after successful update
+      if (imagesToDelete.length > 0) {
+        deleteImageFiles(imagesToDelete);
+      }
+
+      res.json({
+        message: 'Product updated successfully',
+        product
+      });
+    } catch (updateError) {
+      // If update failed, clean up any newly uploaded files
+      if (req.files && Object.keys(req.files).length > 0) {
+        const photoFiles = req.files.photos || [];
+        const singlePhoto = req.files.photo?.[0];
+        if (photoFiles && photoFiles.length > 0) {
+          photoFiles.forEach(file => {
+            const filePath = path.join(uploadsDir, file.filename);
+            if (fs.existsSync(filePath)) {
+              fs.unlinkSync(filePath);
+            }
+          });
+        } else if (singlePhoto) {
+          const filePath = path.join(uploadsDir, singlePhoto.filename);
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+        }
+      }
+      throw updateError; // Re-throw to be caught by outer catch
+    }
 
   } catch (error) {
     console.error('Error updating product:', error);
@@ -431,14 +713,49 @@ export const updateProduct = async (req, res) => {
 // Delete product (soft delete by setting isActive to false)
 export const deleteProduct = async (req, res) => {
   try {
-    const product = await Product.findByIdAndUpdate(
+    // Get product first to access image URLs before deletion
+    const product = await Product.findById(req.params.id);
+    
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    // Collect all image URLs to delete
+    const imagesToDelete = [];
+    if (product.photo) {
+      imagesToDelete.push(product.photo);
+    }
+    if (product.photos && Array.isArray(product.photos)) {
+      product.photos.forEach(photo => {
+        if (photo && !imagesToDelete.includes(photo)) {
+          imagesToDelete.push(photo);
+        }
+      });
+    }
+    
+    // Also check variant images
+    if (product.variants && Array.isArray(product.variants)) {
+      product.variants.forEach(variant => {
+        if (variant.images && Array.isArray(variant.images)) {
+          variant.images.forEach(img => {
+            if (img && !imagesToDelete.includes(img)) {
+              imagesToDelete.push(img);
+            }
+          });
+        }
+      });
+    }
+
+    // Soft delete the product
+    await Product.findByIdAndUpdate(
       req.params.id,
       { isActive: false },
       { new: true }
     );
 
-    if (!product) {
-      return res.status(404).json({ error: 'Product not found' });
+    // Delete all associated image files from storage
+    if (imagesToDelete.length > 0) {
+      deleteImageFiles(imagesToDelete);
     }
 
     res.json({ message: 'Product deleted successfully' });
@@ -497,7 +814,10 @@ export const getProductsBySeller = async (req, res) => {
 
     const products = await Product.find({ 
       seller: sellerId, 
-      isActive: true 
+      isActive: true,
+      category: { 
+        $nin: ['electronics', 'clothing', 'Electronics', 'Clothing', 'ELECTRONICS', 'CLOTHING'] 
+      }
     })
       .populate('seller', 'name email')
       .sort({ displayOrder: 1, createdAt: -1 });
@@ -556,9 +876,13 @@ export const getProductsByProductIds = async (req, res) => {
     console.log(`[Products] Product IDs to search (exact match):`, trimmedIds);
     
     // Build query filter - exact match, case-sensitive
+    // Exclude electronics and clothing categories
     const filter = { 
       productId: { $in: trimmedIds },
-      isActive: true 
+      isActive: true,
+      category: { 
+        $nin: ['electronics', 'clothing', 'Electronics', 'Clothing', 'ELECTRONICS', 'CLOTHING'] 
+      }
     };
     
     // If sellerId is provided, filter by seller
