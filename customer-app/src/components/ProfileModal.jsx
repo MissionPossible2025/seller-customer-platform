@@ -27,16 +27,32 @@ export default function ProfileModal({ isOpen, onClose }) {
     try {
       const userData = localStorage.getItem('user')
       if (userData) {
-        const parsedUser = JSON.parse(userData)
+        let parsedUser = null
+        try {
+          parsedUser = JSON.parse(userData)
+        } catch (parseError) {
+          console.error('Error parsing user from localStorage:', parseError)
+          return
+        }
+
+        if (!parsedUser || typeof parsedUser !== 'object') {
+          console.warn('ProfileModal: Parsed user is not a valid object, skipping profile load:', parsedUser)
+          return
+        }
         
         // Handle different user data structures
         let actualUser
-        if (parsedUser.customer) {
+        if (parsedUser?.customer) {
           actualUser = parsedUser.customer
-        } else if (parsedUser.user) {
+        } else if (parsedUser?.user) {
           actualUser = parsedUser.user
         } else {
           actualUser = parsedUser
+        }
+        
+        if (!actualUser || typeof actualUser !== 'object') {
+          console.warn('ProfileModal: Resolved user object is invalid, skipping profile load:', actualUser)
+          return
         }
         
         setUser(actualUser)
@@ -83,22 +99,44 @@ export default function ProfileModal({ isOpen, onClose }) {
 
     try {
       const userData = localStorage.getItem('user')
-      const parsedUser = JSON.parse(userData)
+      if (!userData) {
+        console.warn('ProfileModal: No user found in localStorage during submit')
+        setMessage('❌ User not found. Please log in again.')
+        setTimeout(() => setMessage(''), 3000)
+        return
+      }
+
+      let parsedUser = null
+      try {
+        parsedUser = JSON.parse(userData)
+      } catch (parseError) {
+        console.error('ProfileModal: Failed to parse user from localStorage:', parseError)
+        setMessage('❌ Invalid user session. Please log in again.')
+        setTimeout(() => setMessage(''), 3000)
+        return
+      }
+
+      if (!parsedUser || typeof parsedUser !== 'object') {
+        console.warn('ProfileModal: Parsed user is not a valid object:', parsedUser)
+        setMessage('❌ Invalid user data. Please log in again.')
+        setTimeout(() => setMessage(''), 3000)
+        return
+      }
       
       // Handle different user data structures
       console.log('ProfileModal: User data from localStorage:', parsedUser)
       
       let userId
-      if (parsedUser.customer && parsedUser.customer._id) {
+      if (parsedUser?.customer?.['_id']) {
         userId = parsedUser.customer._id
         console.log('ProfileModal: Found customer ID:', userId)
-      } else if (parsedUser.user && parsedUser.user._id) {
+      } else if (parsedUser?.user?.['_id']) {
         userId = parsedUser.user._id
         console.log('ProfileModal: Found user ID:', userId)
-      } else if (parsedUser._id) {
+      } else if (parsedUser?._id) {
         userId = parsedUser._id
         console.log('ProfileModal: Found direct _id:', userId)
-      } else if (parsedUser.id) {
+      } else if (parsedUser?.id) {
         userId = parsedUser.id
         console.log('ProfileModal: Found alternative id:', userId)
       }
@@ -111,7 +149,7 @@ export default function ProfileModal({ isOpen, onClose }) {
       }
 
       // Determine which API endpoint to use based on user data structure
-      const isCustomerLogin = parsedUser.customer && parsedUser.customer._id
+      const isCustomerLogin = !!(parsedUser?.customer?.['_id'])
       const apiEndpoint = isCustomerLogin 
         ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/customers/${userId}`
         : `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/users/${userId}`
@@ -145,6 +183,13 @@ export default function ProfileModal({ isOpen, onClose }) {
       let data
       try {
         data = await response.json()
+        if (!data || typeof data !== 'object') {
+          console.error('ProfileModal: Response JSON is not a valid object:', data)
+          setMessage('❌ Failed to update profile: Invalid server response')
+          setTimeout(() => setMessage(''), 3000)
+          setLoading(false)
+          return
+        }
       } catch (parseError) {
         console.error('ProfileModal: Failed to parse response:', parseError)
         const text = await response.text()
@@ -161,9 +206,16 @@ export default function ProfileModal({ isOpen, onClose }) {
       if (response.ok) {
         // Update localStorage with new user data including profileComplete flag
         let updatedUserData
-        const updatedCustomer = data.customer || data.user
+        const updatedCustomer = (data && (data.customer || data.user || data)) || null
+
+        if (!updatedCustomer || typeof updatedCustomer !== 'object') {
+          console.error('ProfileModal: Updated customer data is invalid:', updatedCustomer)
+          setMessage('❌ Failed to update profile: Invalid server response')
+          setTimeout(() => setMessage(''), 3000)
+          return
+        }
         
-        if (parsedUser.customer) {
+        if (parsedUser?.customer) {
           // Handle customer login structure
           updatedUserData = {
             ...parsedUser,
@@ -172,7 +224,7 @@ export default function ProfileModal({ isOpen, onClose }) {
               profileComplete: updatedCustomer.profileComplete !== undefined ? updatedCustomer.profileComplete : true
             }
           }
-        } else if (parsedUser.user) {
+        } else if (parsedUser?.user) {
           // Handle user login structure
           updatedUserData = {
             ...parsedUser,

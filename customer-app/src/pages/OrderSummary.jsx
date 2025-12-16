@@ -400,243 +400,28 @@ export default function OrderSummary() {
             padding: '1.5rem',
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h2 style={{ margin: 0, color: '#0f172a', fontSize: '1.25rem' }}>
-                Customer Details
-              </h2>
-              {!isEditing ? (
-                <button
-                  onClick={handleEdit}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    borderRadius: '8px',
-                    border: '1px solid #3b82f6',
-                    background: 'white',
-                    color: '#3b82f6',
-                    fontSize: '0.9rem',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = '#3b82f6'
-                    e.target.style.color = 'white'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = 'white'
-                    e.target.style.color = '#3b82f6'
-                  }}
-                >
-                  ✏️ Edit
-                </button>
-              ) : (
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button
-                    onClick={handleCancelEdit}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      borderRadius: '8px',
-                      border: '1px solid #dc2626',
-                      background: 'white',
-                      color: '#dc2626',
-                      fontSize: '0.9rem',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.background = '#dc2626'
-                      e.target.style.color = 'white'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.background = 'white'
-                      e.target.style.color = '#dc2626'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    disabled={!hasChanges || saving}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: (!hasChanges || saving) ? '#9ca3af' : '#059669',
-                      color: 'white',
-                      fontSize: '0.9rem',
-                      fontWeight: '500',
-                      cursor: (!hasChanges || saving) ? 'not-allowed' : 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    {saving ? 'Saving...' : '💾 Save'}
-                  </button>
-                </div>
-              )}
-            </div>
-            <div style={{ display: 'grid', gap: '0.75rem' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.35rem', color: '#64748b' }}>Full Name</label>
-                <input
-                  value={orderData.user.name || ''}
-                  onChange={(e) => updateUserField('name', e.target.value)}
-                  disabled={!isEditing}
-                  style={{ 
-                    width: '100%', 
-                    padding: '0.7rem', 
-                    borderRadius: '8px', 
-                    border: '1px solid #d1d5db',
-                    background: isEditing ? 'white' : '#f9fafb',
-                    color: isEditing ? '#0f172a' : '#6b7280'
-                  }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.35rem', color: '#64748b' }}>Phone</label>
-                <input
-                  value={orderData.user.phone || ''}
-                  onChange={(e) => updateUserField('phone', e.target.value)}
-                  disabled={!isEditing}
-                  style={{ 
-                    width: '100%', 
-                    padding: '0.7rem', 
-                    borderRadius: '8px', 
-                    border: '1px solid #d1d5db',
-                    background: isEditing ? 'white' : '#f9fafb',
-                    color: isEditing ? '#0f172a' : '#6b7280'
-                  }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.35rem', color: '#64748b' }}>Email</label>
-                <input
-                  type="email"
-                  value={orderData.user.email || ''}
-                  onChange={(e) => updateUserField('email', e.target.value)}
-                  disabled={!isEditing}
-                  placeholder="customer@example.com"
-                  style={{ 
-                    width: '100%', 
-                    padding: '0.7rem', 
-                    borderRadius: '8px', 
-                    border: '1px solid #d1d5db',
-                    background: isEditing ? 'white' : '#f9fafb',
-                    color: isEditing ? '#0f172a' : '#6b7280'
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div style={{
-            background: 'white',
-            borderRadius: '12px',
-            padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-          }}>
-            <h2 style={{ margin: '0 0 1rem 0', color: '#0f172a', fontSize: '1.25rem' }}>
-              Delivery Address
-            </h2>
-            <div style={{ display: 'grid', gap: '0.75rem' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.35rem', color: '#64748b' }}>Street Address</label>
-                <textarea
-                  rows={3}
-                  value={orderData.user.address?.street || ''}
-                  onChange={(e) => updateUserField('address.street', e.target.value)}
-                  disabled={!isEditing}
-                  style={{ 
-                    width: '100%', 
-                    padding: '0.7rem', 
-                    borderRadius: '8px', 
-                    border: '1px solid #d1d5db', 
-                    resize: 'vertical',
-                    background: isEditing ? 'white' : '#f9fafb',
-                    color: isEditing ? '#0f172a' : '#6b7280'
-                  }}
-                />
-              </div>
-              <div className="address-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.35rem', color: '#64748b' }}>City</label>
-                  <input
-                    value={orderData.user.address?.city || ''}
-                    onChange={(e) => updateUserField('address.city', e.target.value)}
-                    disabled={!isEditing}
-                    style={{ 
-                      width: '100%', 
-                      padding: '0.7rem', 
-                      borderRadius: '8px', 
-                      border: '1px solid #d1d5db',
-                      background: isEditing ? 'white' : '#f9fafb',
-                      color: isEditing ? '#0f172a' : '#6b7280'
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.35rem', color: '#64748b' }}>State</label>
-                  <input
-                    value={orderData.user.address?.state || ''}
-                    onChange={(e) => updateUserField('address.state', e.target.value)}
-                    disabled={!isEditing}
-                    style={{ 
-                      width: '100%', 
-                      padding: '0.7rem', 
-                      borderRadius: '8px', 
-                      border: '1px solid #d1d5db',
-                      background: isEditing ? 'white' : '#f9fafb',
-                      color: isEditing ? '#0f172a' : '#6b7280'
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="address-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.35rem', color: '#64748b' }}>Pincode</label>
-                  <input
-                    value={orderData.user.address?.pincode || ''}
-                    onChange={(e) => updateUserField('address.pincode', e.target.value)}
-                    disabled={!isEditing}
-                    style={{ 
-                      width: '100%', 
-                      padding: '0.7rem', 
-                      borderRadius: '8px', 
-                      border: '1px solid #d1d5db',
-                      background: isEditing ? 'white' : '#f9fafb',
-                      color: isEditing ? '#0f172a' : '#6b7280'
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.35rem', color: '#64748b' }}>Country</label>
-                  <input
-                    value={orderData.user.address?.country || 'India'}
-                    onChange={(e) => updateUserField('address.country', e.target.value)}
-                    disabled={!isEditing}
-                    style={{ 
-                      width: '100%', 
-                      padding: '0.7rem', 
-                      borderRadius: '8px', 
-                      border: '1px solid #d1d5db',
-                      background: isEditing ? 'white' : '#f9fafb',
-                      color: isEditing ? '#0f172a' : '#6b7280'
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div style={{
-            background: 'white',
-            borderRadius: '12px',
-            padding: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-          }}>
             <h2 style={{ margin: '0 0 1rem 0', color: '#0f172a', fontSize: '1.25rem' }}>
               Order Items ({cartItems.length})
             </h2>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+              <button
+                onClick={handlePlaceOrder}
+                style={{
+                  padding: '0.65rem 1.25rem',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#059669',
+                  color: 'white',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                }}
+              >
+                Place Order
+              </button>
+            </div>
             
             <div style={{ display: 'grid', gap: '1rem' }}>
               {cartItems.map((item) => {

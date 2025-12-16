@@ -724,6 +724,7 @@ export default function Dashboard({ user }) {
               onClick={(e) => e.stopPropagation()}
               style={{
                 backgroundColor: "white",
+                color: "#000000",
                 borderRadius: "16px",
                 padding: "2rem",
                 maxWidth: "500px",

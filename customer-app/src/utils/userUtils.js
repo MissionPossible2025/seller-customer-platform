@@ -12,29 +12,34 @@ export const getUserId = (userData) => {
     console.log('getUserId: No user data provided')
     return null
   }
+
+   if (typeof userData !== 'object') {
+    console.warn('getUserId: User data is not an object:', userData)
+    return null
+  }
   
   console.log('getUserId: User data structure:', userData)
   
   // Handle customer login structure: { token, customer: { _id, ... } }
-  if (userData.customer && userData.customer._id) {
+  if (userData?.customer?.['_id']) {
     console.log('getUserId: Found customer ID:', userData.customer._id)
     return userData.customer._id
   }
   
   // Handle user login structure: { token, user: { _id, ... } }
-  if (userData.user && userData.user._id) {
+  if (userData?.user?.['_id']) {
     console.log('getUserId: Found user ID:', userData.user._id)
     return userData.user._id
   }
   
   // Handle direct user structure: { _id, ... }
-  if (userData._id) {
+  if (userData?._id) {
     console.log('getUserId: Found direct _id:', userData._id)
     return userData._id
   }
   
   // Handle alternative ID field
-  if (userData.id) {
+  if (userData?.id) {
     console.log('getUserId: Found alternative id:', userData.id)
     return userData.id
   }
@@ -46,14 +51,18 @@ export const getUserId = (userData) => {
 // Extract user object from different user data structures
 export const getUserObject = (userData) => {
   if (!userData) return null
+  if (typeof userData !== 'object') {
+    console.warn('getUserObject: User data is not an object:', userData)
+    return null
+  }
   
   // Handle customer login structure: { token, customer: { _id, ... } }
-  if (userData.customer) {
+  if (userData?.customer) {
     return userData.customer
   }
   
   // Handle user login structure: { token, user: { _id, ... } }
-  if (userData.user) {
+  if (userData?.user) {
     return userData.user
   }
   

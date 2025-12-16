@@ -94,7 +94,7 @@ export default function Dashboard() {
             <SearchBar 
               value={searchTerm}
               onChange={setSearchTerm}
-              placeholder="Search products..."
+              placeholder="Search products, categories ..."
             />
           </div>
         </div>

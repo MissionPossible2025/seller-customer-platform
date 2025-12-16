@@ -602,17 +602,32 @@ export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
           })
           
           if (response.ok) {
-            const data = await response.json()
-            actualUser = data.customer || data.user || data
-            
-            // Update localStorage with latest data
-            const updatedUserData = { ...user }
-            if (updatedUserData.customer) {
-              updatedUserData.customer = actualUser
-            } else if (updatedUserData.user) {
-              updatedUserData.user = actualUser
+            let data = null
+            try {
+              data = await response.json()
+            } catch (parseError) {
+              console.error('Error parsing latest user data response JSON:', parseError)
+              data = null
             }
-            localStorage.setItem('user', JSON.stringify(updatedUserData))
+
+            if (data && typeof data === 'object') {
+              actualUser = data.customer || data.user || data
+
+              if (actualUser && typeof actualUser === 'object') {
+                // Update localStorage with latest data
+                const updatedUserData = { ...user }
+                if (updatedUserData.customer) {
+                  updatedUserData.customer = actualUser
+                } else if (updatedUserData.user) {
+                  updatedUserData.user = actualUser
+                }
+                localStorage.setItem('user', JSON.stringify(updatedUserData))
+              } else {
+                console.warn('Latest user data did not contain a valid customer/user object:', actualUser)
+              }
+            } else {
+              console.warn('Latest user data response is not a valid object:', data)
+            }
           }
         } catch (error) {
           console.error('Error fetching latest user data:', error)
@@ -698,16 +713,36 @@ export default function ProductsList({ searchTerm: externalSearchTerm = '' }) {
           
           // Re-fetch user data to get updated profile
           if (actualUser?._id) {
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/customers/${actualUser._id}`, {
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
+            try {
+              const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/customers/${actualUser._id}`, {
+                method: 'GET',
+                headers: {
+                  'Content-Type': 'application/json',
+                }
+              })
+              
+              if (response.ok) {
+                let data = null
+                try {
+                  data = await response.json()
+                } catch (parseError) {
+                  console.error('Error parsing updated user data response JSON:', parseError)
+                  data = null
+                }
+
+                if (data && typeof data === 'object') {
+                  const resolvedUser = data.customer || data.user || data
+                  if (resolvedUser && typeof resolvedUser === 'object') {
+                    actualUser = resolvedUser
+                  } else {
+                    console.warn('Updated user data did not contain a valid customer/user object:', resolvedUser)
+                  }
+                } else {
+                  console.warn('Updated user data response is not a valid object:', data)
+                }
               }
-            })
-            
-            if (response.ok) {
-              const data = await response.json()
-              actualUser = data.customer || data.user || data
+            } catch (error) {
+              console.error('Error fetching updated user data:', error)
             }
           }
           
