@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import logo from '../assets/dailynk-logo.svg'
 
 export default function SplashScreen() {
   const navigate = useNavigate()
@@ -31,11 +30,16 @@ export default function SplashScreen() {
       boxSizing: 'border-box',
       overflow: 'hidden'
     }}>
-      <img
-        src={logo}
-        alt="DaiLynk logo"
-        style={{ width: '220px', height: 'auto', objectFit: 'contain' }}
-      />
+      <span
+        style={{
+          fontSize: '3rem',
+          fontWeight: 700,
+          letterSpacing: '0.15em',
+          color: '#0f172a'
+        }}
+      >
+        DAILYNK
+      </span>
     </div>
   )
 }

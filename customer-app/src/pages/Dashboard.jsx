@@ -7,7 +7,7 @@ import Sidebar from '../components/Sidebar'
 import ProductsList from '../components/ProductsList'
 import { useCart } from '../hooks/useCart'
 import { getCurrentUser, getUserId } from '../utils/userUtils'
-import dreamSyncLogo from '../assets/dreamsync-logo.svg'
+import resolveImageUrl from '../utils/imageUtils'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -121,7 +121,7 @@ export default function Dashboard() {
           textAlign: 'center'
         }}>
           <img
-            src={dreamSyncLogo}
+            src={resolveImageUrl('/uploads/dreamsync-logo.svg')}
             alt="DreamSync Creations logo"
             style={{ height: '52px', width: 'auto' }}
           />
@@ -129,19 +129,6 @@ export default function Dashboard() {
             <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', letterSpacing: '0.02em' }}>
               DreamSync Creations
             </span>
-            <a 
-              href="mailto:dreamsynccreations@gmail.com"
-              style={{ 
-                fontSize: '0.9rem', 
-                color: '#3b82f6', 
-                textDecoration: 'none',
-                fontWeight: 500
-              }}
-              onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
-              onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
-            >
-              dreamsynccreations@gmail.com
-            </a>
           </div>
         </div>
       </footer>
