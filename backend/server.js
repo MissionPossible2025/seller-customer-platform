@@ -9,6 +9,7 @@ import orderRoutes from './routes/orderRoutes.js';
 import customerRoutes from './routes/customerRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
 import highlightedProductRoutes from './routes/highlightedProductRoutes.js';
+import imagekitRoutes from './routes/imagekitRoutes.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -34,6 +35,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/highlighted-products", highlightedProductRoutes);
+app.use("/api/imagekit", imagekitRoutes);
 
 // MongoDB connection
 await connectDB();

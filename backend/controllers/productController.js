@@ -3,6 +3,12 @@ import Product from '../models/productModel.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import {
+  uploadImageToImageKit,
+  uploadMultipleImagesToImageKit,
+  deleteImageFromImageKit,
+  isImageKitUrl
+} from '../utils/imagekitUpload.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,17 +34,25 @@ const extractFilenameFromUrl = (url) => {
   return filename || null;
 };
 
-// Helper to delete image file from storage
-const deleteImageFile = (imageUrl) => {
+// Helper to delete image from ImageKit or local storage
+const deleteImageFile = async (imageUrl, fileId = null) => {
   try {
     if (!imageUrl) return;
+    
+    // If it's an ImageKit URL, delete from ImageKit
+    if (isImageKitUrl(imageUrl) && fileId) {
+      await deleteImageFromImageKit(fileId);
+      return;
+    }
+    
+    // Otherwise, try to delete from local storage (backward compatibility)
     const filename = extractFilenameFromUrl(imageUrl);
     if (!filename) return;
     
     const filePath = path.join(uploadsDir, filename);
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
-      console.log(`Deleted image file: ${filename}`);
+      console.log(`Deleted local image file: ${filename}`);
     }
   } catch (error) {
     console.error(`Error deleting image file ${imageUrl}:`, error);
@@ -47,9 +61,12 @@ const deleteImageFile = (imageUrl) => {
 };
 
 // Helper to delete multiple image files
-const deleteImageFiles = (imageUrls) => {
+const deleteImageFiles = async (imageUrls, fileIds = {}) => {
   if (!Array.isArray(imageUrls)) return;
-  imageUrls.forEach(url => deleteImageFile(url));
+  for (const url of imageUrls) {
+    const fileId = fileIds[url] || null;
+    await deleteImageFile(url, fileId);
+  }
 };
 
 // Create a new product
@@ -158,11 +175,10 @@ export const createProduct = async (req, res) => {
       }
     }
 
-    // Handle photo uploads - support both single photo (backward compatibility) and multiple photos
+    // Handle photo uploads - upload to ImageKit instead of local storage
     let photoUrl = null;
     let photoUrls = [];
-    
-    const baseUrl = getBaseUrl(req);
+    let imageKitFileIds = {}; // Store ImageKit fileIds for future deletion
 
     // Debug logging for file uploads
     console.log('[createProduct] Files received:', req.files ? Object.keys(req.files) : 'none');
@@ -174,37 +190,65 @@ export const createProduct = async (req, res) => {
     }
 
     if (req.files && Object.keys(req.files).length > 0) {
-      // Check if files are named 'photos' (multiple) or 'photo' (single)
+      // Files are uploaded - upload them to ImageKit
       const photoFiles = req.files.photos || [];
       const singlePhoto = req.files.photo?.[0];
       
-      if (photoFiles && photoFiles.length > 0) {
-        // Multiple photos - validate filenames
-        photoUrls = photoFiles
-          .filter(file => file && file.filename && file.filename.trim() !== '')
-          .map(file => {
-            const url = `${baseUrl}/uploads/${file.filename}`;
-            console.log('[createProduct] Processing photo file:', file.filename, '->', url);
-            return url;
+      try {
+        if (photoFiles && photoFiles.length > 0) {
+          // Multiple photos - upload all to ImageKit
+          const folder = `/products/${trimmedProductId}`;
+          const baseFileName = `${trimmedProductId}`;
+          
+          const uploadResults = await uploadMultipleImagesToImageKit(
+            photoFiles,
+            baseFileName,
+            folder,
+            { tags: [`product-${trimmedProductId}`, category] }
+          );
+          
+          photoUrls = uploadResults.map(result => result.url);
+          // Store fileIds for future deletion
+          uploadResults.forEach((result, index) => {
+            imageKitFileIds[result.url] = result.fileId;
           });
-        
-        // Set the first photo as the main photo for backward compatibility
-        if (photoUrls.length > 0) {
-          photoUrl = photoUrls[0];
-          console.log('[createProduct] Set main photo URL:', photoUrl);
+          
+          // Set the first photo as the main photo
+          if (photoUrls.length > 0) {
+            photoUrl = photoUrls[0];
+          }
+          
+          console.log('[createProduct] Uploaded', photoUrls.length, 'images to ImageKit');
+        } else if (singlePhoto) {
+          // Single photo - upload to ImageKit
+          const folder = `/products/${trimmedProductId}`;
+          const fileName = `${trimmedProductId}-${Date.now()}.${singlePhoto.originalname.split('.').pop() || 'jpg'}`;
+          
+          const uploadResult = await uploadImageToImageKit(
+            singlePhoto,
+            fileName,
+            folder,
+            { tags: [`product-${trimmedProductId}`, category] }
+          );
+          
+          photoUrl = uploadResult.url;
+          photoUrls = [photoUrl];
+          imageKitFileIds[photoUrl] = uploadResult.fileId;
+          
+          console.log('[createProduct] Uploaded single image to ImageKit:', photoUrl);
         }
-      } else if (singlePhoto && singlePhoto.filename && singlePhoto.filename.trim() !== '') {
-        // Single photo (backward compatibility) - validate filename
-        photoUrl = `${baseUrl}/uploads/${singlePhoto.filename}`;
-        photoUrls = [photoUrl];
-        console.log('[createProduct] Set single photo URL:', photoUrl);
+      } catch (uploadError) {
+        console.error('[createProduct] Error uploading images to ImageKit:', uploadError);
+        return res.status(500).json({
+          error: 'Failed to upload images to ImageKit',
+          details: uploadError.message
+        });
       }
     } else {
-      // Fallback: check if photo URLs are provided in body
-      // Validate URLs before using them
+      // Fallback: check if photo URLs are provided in body (already uploaded to ImageKit or external URLs)
       const isValidUrl = (url) => {
         if (!url || typeof url !== 'string') return false;
-        // Must be a valid URL pattern (http/https or /uploads/ path)
+        // Accept any valid URL (ImageKit URLs, external URLs, or local paths for backward compatibility)
         return /^https?:\/\/|^\/uploads\//.test(url.trim());
       };
       
@@ -235,18 +279,6 @@ export const createProduct = async (req, res) => {
       photoUrl = photoUrls[0];
       console.log('[createProduct] Set photo from photos array:', photoUrl);
     }
-    
-    // Final validation - ensure we only save valid URLs
-    const finalPhotoUrl = photoUrl && /^https?:\/\/|^\/uploads\//.test(photoUrl) ? photoUrl : null;
-    const finalPhotoUrls = photoUrls.filter(url => url && /^https?:\/\/|^\/uploads\//.test(url));
-    
-    // If we have valid photos but no main photo, set it
-    if (!finalPhotoUrl && finalPhotoUrls.length > 0) {
-      photoUrl = finalPhotoUrls[0];
-    } else {
-      photoUrl = finalPhotoUrl;
-    }
-    photoUrls = finalPhotoUrls;
     
     console.log('[createProduct] Final photo URLs - photo:', photoUrl, 'photos:', photoUrls);
 
@@ -302,9 +334,11 @@ export const createProduct = async (req, res) => {
         photosCount: savedProduct.photos ? savedProduct.photos.length : 0
       });
     } catch (error) {
-      // If product creation fails, clean up uploaded files
+      // If product creation fails, try to delete uploaded ImageKit images
+      // Note: This is best effort - ImageKit images will remain if deletion fails
       if (photoUrls.length > 0) {
-        deleteImageFiles(photoUrls);
+        console.warn('[createProduct] Product creation failed, attempting to clean up ImageKit images');
+        await deleteImageFiles(photoUrls, imageKitFileIds);
       }
       throw error; // Re-throw to be caught by outer catch
     }
@@ -520,8 +554,6 @@ export const updateProduct = async (req, res) => {
       }
     }
 
-    const baseUrl = getBaseUrl(req);
-
     const updateData = {};
     if (name !== undefined) updateData.name = name;
     if (req.body.brand !== undefined) updateData.brand = req.body.brand;
@@ -537,9 +569,10 @@ export const updateProduct = async (req, res) => {
     if (attributes !== undefined) updateData.attributes = parsedAttributes;
     if (variants !== undefined) updateData.variants = parsedVariants;
     
-    // Handle photo uploads - support both single and multiple photos
+    // Handle photo uploads - upload to ImageKit instead of local storage
     let allPhotos = [];
-    let imagesToDelete = []; // Track old images to delete after successful update
+    let imagesToDelete = []; // Track old ImageKit images to delete after successful update
+    let imageKitFileIdsToDelete = {}; // Store fileIds for ImageKit deletion
     
     // Get existing product to preserve existing photos
     const existingProduct = await Product.findById(req.params.id);
@@ -549,46 +582,100 @@ export const updateProduct = async (req, res) => {
     
     let existingPhotos = existingProduct?.photos || [];
     const existingPhoto = existingProduct?.photo;
+    const productId = existingProduct.productId;
     
     // Handle image removal: if photo/photos are explicitly set to empty/null
     if (req.body.removePhotos === 'true' || req.body.photos === '' || req.body.photo === '') {
-      // Mark all existing images for deletion
-      if (existingPhoto) imagesToDelete.push(existingPhoto);
+      // Mark all existing images for deletion from ImageKit
+      if (existingPhoto && isImageKitUrl(existingPhoto)) {
+        imagesToDelete.push(existingPhoto);
+      }
       if (existingPhotos && existingPhotos.length > 0) {
-        imagesToDelete.push(...existingPhotos);
+        existingPhotos.forEach(url => {
+          if (isImageKitUrl(url)) {
+            imagesToDelete.push(url);
+          }
+        });
       }
       allPhotos = [];
       updateData.photos = [];
       updateData.photo = null;
     } else if (req.files && Object.keys(req.files).length > 0) {
-      // New images are being uploaded - replace existing ones
+      // New images are being uploaded - upload to ImageKit and replace existing ones
       const photoFiles = req.files.photos || [];
       const singlePhoto = req.files.photo?.[0];
       
-      if (photoFiles && photoFiles.length > 0) {
-        // Multiple photos - replace all existing
-        const newPhotoUrls = photoFiles.map(file => `${baseUrl}/uploads/${file.filename}`);
-        // Mark old images for deletion (only after successful save)
-        if (existingPhoto) imagesToDelete.push(existingPhoto);
-        if (existingPhotos && existingPhotos.length > 0) {
-          imagesToDelete.push(...existingPhotos);
+      try {
+        if (photoFiles && photoFiles.length > 0) {
+          // Multiple photos - upload all to ImageKit
+          const folder = `/products/${productId}`;
+          const baseFileName = `${productId}`;
+          
+          const uploadResults = await uploadMultipleImagesToImageKit(
+            photoFiles,
+            baseFileName,
+            folder,
+            { tags: [`product-${productId}`, category || existingProduct.category] }
+          );
+          
+          allPhotos = uploadResults.map(result => result.url);
+          
+          // Mark old images for deletion from ImageKit (only after successful save)
+          if (existingPhoto && isImageKitUrl(existingPhoto)) {
+            imagesToDelete.push(existingPhoto);
+          }
+          if (existingPhotos && existingPhotos.length > 0) {
+            existingPhotos.forEach(url => {
+              if (isImageKitUrl(url)) {
+                imagesToDelete.push(url);
+              }
+            });
+          }
+          
+          updateData.photos = allPhotos;
+          if (allPhotos.length > 0) {
+            updateData.photo = allPhotos[0];
+          }
+          
+          console.log('[updateProduct] Uploaded', allPhotos.length, 'new images to ImageKit');
+        } else if (singlePhoto) {
+          // Single photo - upload to ImageKit
+          const folder = `/products/${productId}`;
+          const fileName = `${productId}-${Date.now()}.${singlePhoto.originalname.split('.').pop() || 'jpg'}`;
+          
+          const uploadResult = await uploadImageToImageKit(
+            singlePhoto,
+            fileName,
+            folder,
+            { tags: [`product-${productId}`, category || existingProduct.category] }
+          );
+          
+          const newPhotoUrl = uploadResult.url;
+          
+          // Mark old images for deletion from ImageKit (only after successful save)
+          if (existingPhoto && isImageKitUrl(existingPhoto)) {
+            imagesToDelete.push(existingPhoto);
+          }
+          if (existingPhotos && existingPhotos.length > 0) {
+            existingPhotos.forEach(url => {
+              if (isImageKitUrl(url)) {
+                imagesToDelete.push(url);
+              }
+            });
+          }
+          
+          updateData.photo = newPhotoUrl;
+          allPhotos = [newPhotoUrl];
+          updateData.photos = allPhotos;
+          
+          console.log('[updateProduct] Uploaded single new image to ImageKit:', newPhotoUrl);
         }
-        allPhotos = newPhotoUrls;
-        updateData.photos = allPhotos;
-        if (allPhotos.length > 0) {
-          updateData.photo = allPhotos[0];
-        }
-      } else if (singlePhoto) {
-        // Single photo replacement
-        const newPhotoUrl = `${baseUrl}/uploads/${singlePhoto.filename}`;
-        // Mark old images for deletion (only after successful save)
-        if (existingPhoto) imagesToDelete.push(existingPhoto);
-        if (existingPhotos && existingPhotos.length > 0) {
-          imagesToDelete.push(...existingPhotos);
-        }
-        updateData.photo = newPhotoUrl;
-        allPhotos = [newPhotoUrl];
-        updateData.photos = allPhotos;
+      } catch (uploadError) {
+        console.error('[updateProduct] Error uploading images to ImageKit:', uploadError);
+        return res.status(500).json({
+          error: 'Failed to upload images to ImageKit',
+          details: uploadError.message
+        });
       }
     } else {
       // No new files uploaded - keep existing photos unless explicitly changed
@@ -649,30 +736,18 @@ export const updateProduct = async (req, res) => {
       ).populate('seller', 'name email');
 
       if (!product) {
-        // If update failed, clean up any newly uploaded files
-        if (req.files && Object.keys(req.files).length > 0) {
-          const photoFiles = req.files.photos || [];
-          const singlePhoto = req.files.photo?.[0];
-          if (photoFiles && photoFiles.length > 0) {
-            photoFiles.forEach(file => {
-              const filePath = path.join(uploadsDir, file.filename);
-              if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-              }
-            });
-          } else if (singlePhoto) {
-            const filePath = path.join(uploadsDir, singlePhoto.filename);
-            if (fs.existsSync(filePath)) {
-              fs.unlinkSync(filePath);
-            }
-          }
+        // If update failed, try to delete newly uploaded ImageKit images
+        // Note: This is best effort - ImageKit doesn't provide easy rollback
+        if (req.files && Object.keys(req.files).length > 0 && allPhotos.length > 0) {
+          console.warn('[updateProduct] Update failed, but new images were uploaded to ImageKit');
+          // Could implement rollback here if needed, but typically we keep the images
         }
         return res.status(404).json({ error: 'Product not found' });
       }
 
-      // Delete old image files only after successful update
+      // Delete old ImageKit images only after successful update
       if (imagesToDelete.length > 0) {
-        deleteImageFiles(imagesToDelete);
+        await deleteImageFiles(imagesToDelete, imageKitFileIdsToDelete);
       }
 
       res.json({
@@ -680,23 +755,11 @@ export const updateProduct = async (req, res) => {
         product
       });
     } catch (updateError) {
-      // If update failed, clean up any newly uploaded files
-      if (req.files && Object.keys(req.files).length > 0) {
-        const photoFiles = req.files.photos || [];
-        const singlePhoto = req.files.photo?.[0];
-        if (photoFiles && photoFiles.length > 0) {
-          photoFiles.forEach(file => {
-            const filePath = path.join(uploadsDir, file.filename);
-            if (fs.existsSync(filePath)) {
-              fs.unlinkSync(filePath);
-            }
-          });
-        } else if (singlePhoto) {
-          const filePath = path.join(uploadsDir, singlePhoto.filename);
-          if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-          }
-        }
+      // If update failed, log warning about newly uploaded ImageKit images
+      // Note: ImageKit images will remain, but product wasn't updated
+      if (req.files && Object.keys(req.files).length > 0 && allPhotos.length > 0) {
+        console.warn('[updateProduct] Update failed, but new images were uploaded to ImageKit:', allPhotos);
+        // Could implement rollback here if needed
       }
       throw updateError; // Re-throw to be caught by outer catch
     }
@@ -720,14 +783,14 @@ export const deleteProduct = async (req, res) => {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    // Collect all image URLs to delete
+    // Collect all image URLs to delete from ImageKit
     const imagesToDelete = [];
-    if (product.photo) {
+    if (product.photo && isImageKitUrl(product.photo)) {
       imagesToDelete.push(product.photo);
     }
     if (product.photos && Array.isArray(product.photos)) {
       product.photos.forEach(photo => {
-        if (photo && !imagesToDelete.includes(photo)) {
+        if (photo && isImageKitUrl(photo) && !imagesToDelete.includes(photo)) {
           imagesToDelete.push(photo);
         }
       });
@@ -738,7 +801,7 @@ export const deleteProduct = async (req, res) => {
       product.variants.forEach(variant => {
         if (variant.images && Array.isArray(variant.images)) {
           variant.images.forEach(img => {
-            if (img && !imagesToDelete.includes(img)) {
+            if (img && isImageKitUrl(img) && !imagesToDelete.includes(img)) {
               imagesToDelete.push(img);
             }
           });
@@ -753,9 +816,9 @@ export const deleteProduct = async (req, res) => {
       { new: true }
     );
 
-    // Delete all associated image files from storage
+    // Delete all associated images from ImageKit
     if (imagesToDelete.length > 0) {
-      deleteImageFiles(imagesToDelete);
+      await deleteImageFiles(imagesToDelete);
     }
 
     res.json({ message: 'Product deleted successfully' });
